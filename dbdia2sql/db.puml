@@ -1,0 +1,54 @@
+@startuml
+
+skinparam monochrome true
+scale 2
+
+!define table(x) class x << (T,#FFAAAA) >>
+!define primary_key(x) <$primary><i>x</i>
+hide methods
+hide stereotypes
+sprite $primary [17x12/16z] bOqv3e1030CJRzPn9Fx_NWY7n4eqJ3TJs6OVa5pTpD-5tl3YyFHG-4DsqAOnWgawWp0r0KGagDuGMYMJxbMrBxzLPJ_O0G00
+
+table(customerTable) {
+    primary_key(idCust) INTEGER
+    name TEXT
+    email TEXT
+    address TEXT
+    city TEXT
+}
+
+table(cityTable) {
+    primary_key(idCity) INTEGER
+    city TEXT
+    country TEXT
+}
+
+table(countryTable) {
+    primary_key(idCountry) INTEGER
+    country TEXT
+}
+
+table(orderTable) {
+    primary_key(idOrder) INTEGER
+    custId INTEGER
+    date DATE
+}
+
+table(orderProductTable) {
+    primary_key(orderId) INTEGER
+    productId INTEGER
+}
+
+table(productTable) {
+    primary_key(idProd) INTEGER
+    product TEXT
+}
+
+customerTable "city  " --> "idCity" cityTable
+cityTable "country" --> "idCountry" countryTable
+
+customerTable "idCust " <-- "custId  " orderTable
+orderTable "idOrder " <-- "orderId " orderProductTable
+orderProductTable "productId " --> "idProd " productTable
+
+@enduml
