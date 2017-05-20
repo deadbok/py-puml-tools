@@ -6,8 +6,6 @@
 # you can do whatever you want with this stuff. If we meet some day, and you think
 # this stuff is worth it, you can buy me a beer in return. Martin B. K. Grønholdt
 # --------------------------------------------------------------------------------
-# Program to convert a database diagram written in a subset of PlantUML to
-# SQLite syntax that will create the actual tables and relations.
 #
 # Version 1.0.0
 #  * Few touch ups
