@@ -9,7 +9,10 @@
 # Program to convert a database diagram written in a subset of PlantUML to
 # SQLite syntax that will create the actual tables and relations.
 #
-# Version 1.0.0
+# Version 1.0.2 (2017-08-03)
+#  * Fix help description.
+#
+# Version 1.0.1
 #  * Few touch ups
 #
 # Version 1.0.0
@@ -18,7 +21,7 @@
 """
 Name: dbdia2sql.py
 Author: Martin Bo Kristensen Grønholdt.
-Version: 1.0.0 (2017-05-14)
+Version 1.0.2 (2017-08-03)
 
 Convert a database diagram written in a subset of PlantUML to SQLite syntax
 that will create the actual tables and relations.
@@ -28,7 +31,7 @@ import argparse
 import re
 
 # Program version.
-__VERSION__ = '1.0.0'
+__VERSION__ = '1.0.2'
 
 
 class Table:
@@ -338,13 +341,14 @@ def parse_commandline():
     """
     Parse command line arguments.
     
-    :return: A tuple with a list of files path to include, and a list of paths
-             to exclude.
+    :return: Plant UML input file.
     """
     # Set up the arguments.
     parser = ArgumentParser(description='dbdia2sql v{}'.format(__VERSION__) +
-                                        ' by Martin B. K. Grønholdt\n Count' +
-                                        ' lines of Python code in given paths.')
+                                        ' by Martin B. K. Grønholdt\n Convert' +
+                                        ' a Plant UML databse diagram to the ' +
+                                        ' SQL statements needed to create the' +
+                                        ' datbase.')
     parser.add_argument('infile', type=argparse.FileType('r'),
                         help='PlantUML file to read the database structure' +
                              ' from.')
