@@ -10,7 +10,10 @@
 Name: sqlparsetables.py
 Author: Martin Bo Kristensen Grønholdt.
 
-Transform SQL into PUML.
+Parse SQL CREATE TABLE statements.
+
+*This parser is not complete, it s tested with some generic statements, but I
+am sure it will fall appart given the right input.*
 """
 import re
 
@@ -19,6 +22,8 @@ class SQLParseTables:
     def parse(self, sql):
         """
         Use sqlparse to parse the SQL file.
+
+        MySQL CREATE TABLE syntax: https://dev.mysql.com/doc/refman/5.7/en/create-table.html
 
         :param sql: The SQL string to parse.
         :return:
@@ -43,14 +48,17 @@ class SQLParseTables:
             # List of parsed column definitions.
             columns = list()
             # Parse defintiions.
+            columns = list()
+
             for definition in definition_list:
+                column = dict()
                 # Clean up the definition.
                 definition = definition.replace('\n', '').replace('\t',
                                                                   '').lstrip(
                     ' ')
 
                 # Find names and types.
-                match = re.search(r'^(\[[\w ]+\]|\w+)\s+(\w+)',
+                match = re.search(r'^(\[[\w ]+\]|\w+)\s+(\w+)\s*(\w*)',
                                   definition)
                 # Only process column definitions.
                 if match is not None:
@@ -61,29 +69,57 @@ class SQLParseTables:
                                               'SPATIAL',
                                               'CHECK',
                                               'FOREIGN']:
-                        self.add_column_var(match.group(1).strip('[]'),
-                                        match.group(2))
+                        if match.group(3) == 'PRIMARY':
+                            column['name'] = match.group(1).strip('[]')
+                            column['type'] = match.group(2)
+                            column['primary'] = True
+                            column['foreign'] = False
+                        else:
+                            column['name'] = match.group(1).strip('[]')
+                            column['type'] = match.group(2)
+                            column['primary'] = False
+                            column['foreign'] = False
+
+                        columns.append(column)
 
                 # Find constraints.
                 match = re.search(r'^CONSTRAINT\s+(\[[\w ]+\]|\w+)\s+(.*)',
                                   definition)
                 if match is not None:
-                    print(match.group(1).strip('[]'))
+                    # Ignore the (symbol) name of the constraint for now.
                     definition = match.group(2)
+                    if definition.startswith('PRIMARY'):
+                        var_name_begin = definition.find('(') + 1
+                        var_name_end = definition.find(')')
+                        name = definition[var_name_begin:var_name_end].strip('[]')
+
+                        for i in range(0, len(columns)):
+                            if columns[i]['name'] == name:
+                                columns[i]['primary'] = True
+
+
+            for column in columns:
+                if column['primary']:
+                    self.add_column_primary(column['name'], column['type'])
+                elif column['foreign']:
+                    self.add_column_foreign(column['name'], column['type'])
+                else:
+                    self.add_column(column['name'], column['type'])
+
 
 
     def add_table(self, name):
         raise NotImplementedError(
             "Please implement the 'add_table' method in a derived class.")
 
-    def add_column_var(self, name, type):
+    def add_colum(self, name, type):
         raise NotImplementedError(
             "Please implement the 'add_column' method in a derived class.")
 
     def add_column_primary(self, name, type):
         raise NotImplementedError(
-            "Please implement the 'add_column' method in a derived class.")
+            "Please implement the 'add_column_primary' method in a derived class.")
 
     def add_column_foreign(self, name, type):
         raise NotImplementedError(
-            "Please implement the 'add_column' method in a derived class.")
+            "Please implement the 'add_column_foreign' method in a derived class.")
