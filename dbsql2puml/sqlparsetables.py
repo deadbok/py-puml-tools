@@ -91,12 +91,21 @@ class SQLParseTables:
                     if definition.startswith('PRIMARY'):
                         var_name_begin = definition.find('(') + 1
                         var_name_end = definition.find(')')
-                        name = definition[var_name_begin:var_name_end].strip('[]')
+                        name = definition[var_name_begin:var_name_end].strip(
+                            '[]')
 
                         for i in range(0, len(columns)):
                             if columns[i]['name'] == name:
                                 columns[i]['primary'] = True
+                    if definition.startswith('FOREIGN'):
+                        column['primary'] = False
+                        column['foreign'] = True
+                        definition_tokens = definition.split(' ')
+                        print(str(definition_tokens))
 
+                        for token in definition_tokens:
+                            if token.startswith('('):
+                                column['name'] = token.strip('()[]')
 
             for column in columns:
                 if column['primary']:
@@ -105,8 +114,6 @@ class SQLParseTables:
                     self.add_column_foreign(column['name'], column['type'])
                 else:
                     self.add_column(column['name'], column['type'])
-
-
 
     def add_table(self, name):
         raise NotImplementedError(
