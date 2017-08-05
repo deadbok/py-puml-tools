@@ -15,6 +15,9 @@
 #  * Does not like end='' in print.
 #
 # History:
+# Version 0.1.9
+#  * Added package argument.
+#
 # Version 0.1.8
 #  * Nicer command line help.
 #
@@ -47,7 +50,7 @@
 import argparse
 import ast
 
-__VERSION__ = '0.1.8'
+__VERSION__ = '0.1.9'
 
 
 class ClassParser(ast.NodeVisitor):
@@ -127,6 +130,8 @@ if __name__ == '__main__':
                         help='The Python source file to parse.')
     parser.add_argument('puml_file', type=argparse.FileType('w'),
                         help='The name of the ouput PlantUML file.')
+    parser.add_argument('--package', default='', dest='package',
+                        help='The package that the input file belongs to.')
     args = parser.parse_args()
 
     try:
@@ -139,9 +144,13 @@ if __name__ == '__main__':
         names = args.py_file.name
         names = names.lstrip('./').split('/')[0:-1]
 
-        namespace = []
-        for name in names:
-            namespace.append(name)
+        if args.package != '':
+            package = args.package.rstrip('.')
+            namespace = package.split('.')
+        else:
+            namespace = []
+            for name in names:
+                namespace.append(name)
 
         if len(class_writer.puml_classes) > 0:
             tabs = 0
