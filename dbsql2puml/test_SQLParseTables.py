@@ -16,7 +16,46 @@ from sqlparsetables import SQLParseTables
 import unittest
 
 
-class SQLParseTableTest(SQLParseTables, unittest.TestCase):
+class SQLTestBase(unittest.TestCase):
+    subtest = 0
+    results = False
+
+    def add_table(self, name):
+        self.results = True
+        self.assertEqual(name, self.table_name)
+
+    def add_column(self, name, type):
+        self.results = True
+        if self.subtest != 0:
+            with self.subTest('Test {}'.format(str(self.subtest))):
+                self.fail('Called add_column')
+        else:
+            self.fail('Called add_column')
+
+
+    def add_column_primary(self, name, type):
+        self.results = True
+        if self.subtest != 0:
+            with self.subTest('Test {}'.format(str(self.subtest))):
+                self.fail('Called add_column_primary')
+        else:
+            self.fail('Called add_column_primary')
+
+
+    def add_column_foreign(self, name, type):
+        self.results = True
+        if self.subtest != 0:
+            with self.subTest('Test {}'.format(str(self.subtest))):
+                self.fail('Called add_column_foreign')
+        else:
+            self.fail('Called add_column_foreign')
+
+
+    def tearDown(self):
+        self.assertTrue(self.results, 'No results from parser.')
+
+
+class SQLParseTableTest(SQLParseTables, SQLTestBase):
     """CREATE TABLE"""
     table_name = 'Test'
     var_name = 'col'
@@ -24,37 +63,42 @@ class SQLParseTableTest(SQLParseTables, unittest.TestCase):
 
     def test_table(self):
         """Test simple CREATE TABLE statements"""
+        self.subtest += 1
         self.parse(
             'CREATE TABLE {} ( {} {} );'.format(self.table_name, self.var_name,
                                                 self.var_type))
+        self.subtest += 1
         self.parse(
             'CREATE TABLE [{}] ( {} {} );'.format(self.table_name,
                                                   self.var_name,
                                                   self.var_type))
+        self.subtest += 1
         self.parse(
-            'CREATE TABLE {} ( [{}] {}] );'.format(self.table_name,
+            'CREATE TABLE {} ( [{}] {} );'.format(self.table_name,
                                                    self.var_name,
                                                    self.var_type))
+        self.subtest += 1
         self.parse(
-            'CREATE TABLE [{}] ( [{}] {}] );'.format(self.table_name,
+            'CREATE TABLE [{}] ( [{}] [{}] );'.format(self.table_name,
                                                      self.var_name,
                                                      self.var_type))
 
     def add_table(self, name):
-        self.assertEqual(name, self.table_name)
+        self.results = True
+        with self.subTest('Test {}'.format(str(self.subtest))):
+            self.assertEqual(name, self.table_name)
 
     def add_column(self, name, type):
-        self.assertEqual(name, self.var_name)
-        self.assertEqual(type, self.var_type)
+        self.results = True
+        with self.subTest('Test {}'.format(str(self.subtest))):
+            self.assertEqual(name, self.var_name)
+            self.assertEqual(type, self.var_type)
 
-    def add_column_primary(self, name, type):
-        self.fail('Called add_column_primary')
-
-    def add_column_foreign(self, name, type):
-        self.fail('Called add_column_foreign')
+    def tearDown(self):
+        self.assertTrue(self.results, 'No results from parser.')
 
 
-class SQLParsePrimaryKeyTest(SQLParseTables, unittest.TestCase):
+class SQLParsePrimaryKeyTest(SQLParseTables, SQLTestBase):
     """PRIMARY KEY"""
     table_name = 'Test'
     var_name = 'col'
@@ -63,18 +107,22 @@ class SQLParsePrimaryKeyTest(SQLParseTables, unittest.TestCase):
 
     def test_table1(self):
         """Test PRIMARY KEY at column definition"""
+        self.subtest += 1
         self.parse(
             'CREATE TABLE {} ( {} {} PRIMARY KEY );'.format(self.table_name,
                                                             self.var_name,
                                                             self.var_type))
+        self.subtest += 1
         self.parse(
             'CREATE TABLE [{}] ( {} {} PRIMARY KEY );'.format(self.table_name,
                                                               self.var_name,
                                                               self.var_type))
+        self.subtest += 1
         self.parse(
             'CREATE TABLE {} ( [{}] {} PRIMARY KEY );'.format(self.table_name,
                                                               self.var_name,
                                                               self.var_type))
+        self.subtest += 1
         self.parse(
             'CREATE TABLE [{}] ( [{}] {} PRIMARY KEY );'.format(
                 self.table_name,
@@ -82,14 +130,17 @@ class SQLParsePrimaryKeyTest(SQLParseTables, unittest.TestCase):
 
     def test_table2(self):
         """Test PRIMARY KEY as CONSTRAINT statement"""
+        self.subtest += 1
         self.parse(
             'CREATE TABLE {} ( {} {}, CONSTRAINT {} PRIMARY KEY({}) );'.format(
                 self.table_name,
                 self.var_name, self.var_type, self.pk_name, self.var_name))
+        self.subtest += 1
         self.parse(
             'CREATE TABLE [{}] ( {} {}, CONSTRAINT {} PRIMARY KEY({}) );'.format(
                 self.table_name,
                 self.var_name, self.var_type, self.pk_name, self.var_name))
+        self.subtest += 1
         self.parse(
             'CREATE TABLE {} ( [{}] {}, CONSTRAINT {} PRIMARY KEY({}) );'.format(
                 self.table_name,
@@ -98,30 +149,33 @@ class SQLParsePrimaryKeyTest(SQLParseTables, unittest.TestCase):
             'CREATE TABLE {} ( {} {}, CONSTRAINT [{}] PRIMARY KEY({}) );'.format(
                 self.table_name,
                 self.var_name, self.var_type, self.pk_name, self.var_name))
+        self.subtest += 1
         self.parse(
             'CREATE TABLE {} ( {} {}, CONSTRAINT {} PRIMARY KEY([{}]) );'.format(
                 self.table_name,
                 self.var_name, self.var_type, self.pk_name, self.var_name))
+        self.subtest += 1
         self.parse(
             'CREATE TABLE [{}] ( [{}] {}, CONSTRAINT [{}] PRIMARY KEY([{}]) );'.format(
                 self.table_name,
                 self.var_name, self.var_type, self.pk_name, self.var_name))
 
     def add_table(self, name):
-        self.assertEqual(name, self.table_name)
-
-    def add_column(self, name, type):
-        self.fail('Called add_column')
+        with self.subTest('Test {}'.format(str(self.subtest))):
+            self.results = True
+            self.assertEqual(name, self.table_name)
 
     def add_column_primary(self, name, type):
-        self.assertEqual(name, self.var_name)
-        self.assertEqual(type, self.var_type)
+        with self.subTest('Test {}'.format(str(self.subtest))):
+            self.results = True
+            self.assertEqual(name, self.var_name)
+            self.assertEqual(type, self.var_type)
 
-    def add_column_foreign(self, name, type):
-        self.fail('Called add_column_foreign')
+    def tearDown(self):
+        self.assertTrue(self.results, 'No results from parser.')
 
 
-class SQLParseForeignKeyTest(SQLParseTables, unittest.TestCase):
+class SQLParseForeignKeyTest(SQLParseTables, SQLTestBase):
     """FOREIGN KEY
 
     [CONSTRAINT [symbol]] FOREIGN KEY
@@ -139,6 +193,8 @@ reference_option:
     fk_name = 'FK_col'
     ref = 'other.col'
 
+    subtest = 0
+
     def test_table(self):
         """Test CONSTRAINT FOREIGN KEY"""
         self.parse(
@@ -148,16 +204,8 @@ reference_option:
                 self.ref))
 
     def add_table(self, name):
+        self.results = True
         self.assertEqual(name, self.table_name)
-
-    def add_column(self, name, type):
-        self.fail('Called add_column')
-
-    def add_column_primary(self, name, type):
-        self.fail('Called add_column_primary')
-
-    def add_column_foreign(self, name, type):
-        self.fail('Called add_column_foreign')
 
 
 if __name__ == '__main__':

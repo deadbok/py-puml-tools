@@ -16,104 +16,108 @@ Parse SQL CREATE TABLE statements.
 am sure it will fall appart given the right input.*
 """
 import re
+from collections import OrderedDict
 
 
 class SQLParseTables:
+    tables = OrderedDict()
+    columns = OrderedDict()
+
+    def get_tables(self, sql):
+        """
+        Find and return all CREATE TABLE statements.
+
+        :param sql: String of SQL statements.
+        :return: Dictionary of table names and table definitions.
+        """
+        # Isolate CREATE statements.
+        for match in re.finditer(r'^CREATE\s+TABLE([^\(]+)\s+\(([^\;]+);', sql,
+                                 re.DOTALL):
+            name = match.group(1).strip()
+
+            name_begin = name.find('[')
+            if name_begin > -1:
+                name_end = name.find(']')
+                name = name[name_begin + 1:name_end]
+            else:
+                tokens = name.split(' ')
+                name = tokens[-1]
+
+            self.tables[name] = match.group(2)[:-1]
+
+        return (self.tables)
+
+    def parse_definition(self, definition):
+        keywords = ['CONSTRAINT', 'INDEX', 'KEY', 'FULLTEXT', 'SPATIAL',
+                    'CHECK', 'FOREIGN', 'PRIMARY']
+
+        # Initial column values.
+        column = {'name': '', 'type': '', 'primary': False, 'foreign': False}
+        tokens = definition.split(' ')
+
+        if tokens[0] not in keywords:
+            print(str(tokens))
+            column['name'] = tokens[0].strip('[]')
+            del tokens[0]
+            column['type'] = tokens[0].strip('[]')
+            del tokens[0]
+
+            if len(tokens) > 0:
+                if tokens[0] == 'PRIMARY':
+                    column['primary'] = True
+
+            self.columns[column['name']] = column
+        else:
+            while len(tokens) > 0:
+                if tokens[0] == 'CONSTRAINT':
+                    del tokens[0]
+
+                    if tokens[0].startswith('['):
+                        while not tokens[0].endswith(']'):
+                            del tokens[0]
+                        
+                    column['name'] = tokens[1].strip('[]')
+                    if tokens[2] == 'PRIMARY':
+                        column['primary'] = True
+
+
+
+                del tokens[0]
+
+            self.columns[column['name']] = column
+
+        return (column)
+
     def parse(self, sql):
         """
-        Use sqlparse to parse the SQL file.
+    Use sqlparse to parse the SQL file.
 
-        MySQL CREATE TABLE syntax: https://dev.mysql.com/doc/refman/5.7/en/create-table.html
+    MySQL CREATE TABLE syntax: https://dev.mysql.com/doc/refman/5.7/en/create-table.html
 
-        :param sql: The SQL string to parse.
-        :return:
-        """
+    :param sql: The SQL string to parse.
+    :return:
+    """
         if not isinstance(sql, str):
             sql = str(sql.read())
-        # Isolate CREATE statements.
-        for match in re.finditer(r'CREATE\s+TABLE[^;]+;', sql,
-                                 re.DOTALL):
-            create_stmt = match.group(0)
 
-            # Get the table name.
-            match = re.search(r'CREATE\s+TABLE\s+(\[[\w ]+\]|\w+)\s',
-                              create_stmt)
-            self.add_table(match.group(1).strip('[]'))
+        for name, definitions in self.get_tables(sql).items():
+            self.add_table(name)
 
-            # Isolate defintions
-            match = match = re.search(r'\((.*)\)', create_stmt, re.DOTALL)
-            definition = match.group(1)
             # Split them into a list by the endning comma.
-            definition_list = re.split(r',\s+', match.group(1))
-            # List of parsed column definitions.
-            columns = list()
-            # Parse defintiions.
-            columns = list()
+            definition_list = re.split(r',\s+', definitions)
 
+            self.columns = OrderedDict()
             for definition in definition_list:
-                column = dict()
-                # Clean up the definition.
-                definition = definition.replace('\n', '').replace('\t',
-                                                                  '').lstrip(
-                    ' ')
+                definition = definition.strip().rstrip()
+                self.parse_definition(definition)
 
-                # Find names and types.
-                match = re.search(r'^(\[[\w ]+\]|\w+)\s+(\w+)\s*(\w*)',
-                                  definition)
-                # Only process column definitions.
-                if match is not None:
-                    if match.group(1) not in ['CONSTRAINT',
-                                              'INDEX',
-                                              'KEY',
-                                              'FULLTEXT',
-                                              'SPATIAL',
-                                              'CHECK',
-                                              'FOREIGN']:
-                        if match.group(3) == 'PRIMARY':
-                            column['name'] = match.group(1).strip('[]')
-                            column['type'] = match.group(2)
-                            column['primary'] = True
-                            column['foreign'] = False
-                        else:
-                            column['name'] = match.group(1).strip('[]')
-                            column['type'] = match.group(2)
-                            column['primary'] = False
-                            column['foreign'] = False
-
-                        columns.append(column)
-
-                # Find constraints.
-                match = re.search(r'^CONSTRAINT\s+(\[[\w ]+\]|\w+)\s+(.*)',
-                                  definition)
-                if match is not None:
-                    # Ignore the (symbol) name of the constraint for now.
-                    definition = match.group(2)
-                    if definition.startswith('PRIMARY'):
-                        var_name_begin = definition.find('(') + 1
-                        var_name_end = definition.find(')')
-                        name = definition[var_name_begin:var_name_end].strip(
-                            '[]')
-
-                        for i in range(0, len(columns)):
-                            if columns[i]['name'] == name:
-                                columns[i]['primary'] = True
-                    if definition.startswith('FOREIGN'):
-                        column['primary'] = False
-                        column['foreign'] = True
-                        definition_tokens = definition.split(' ')
-                        print(str(definition_tokens))
-
-                        for token in definition_tokens:
-                            if token.startswith('('):
-                                column['name'] = token.strip('()[]')
-
-            for column in columns:
-                if column['primary']:
-                    self.add_column_primary(column['name'], column['type'])
-                elif column['foreign']:
-                    self.add_column_foreign(column['name'], column['type'])
-                else:
-                    self.add_column(column['name'], column['type'])
+        for column in self.columns.values():
+            if column['primary'] is True:
+                self.add_column_primary(column['name'], column['type'])
+            elif column['foreign'] is True:
+                self.add_column_foreign(column['name'], column['type'])
+            else:
+                self.add_column(column['name'], column['type'])
 
     def add_table(self, name):
         raise NotImplementedError(
