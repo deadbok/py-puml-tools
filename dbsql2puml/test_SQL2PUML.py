@@ -20,6 +20,7 @@ class TestSQL2PUML(TestCase, SQL2PUML):
         self.add_table('Test')
         self.add_column('col', 'INTVAR')
         self.assertIn('col', self.puml_tables['Test']['default'])
+        self.assertEqual('INTVAR', self.puml_tables['Test']['default']['col'])
 
     def test_add_column_primary(self):
         self.clear()
@@ -30,16 +31,18 @@ class TestSQL2PUML(TestCase, SQL2PUML):
         self.add_table('Test')
         self.add_column_primary('col', 'INTVAR')
         self.assertIn('col', self.puml_tables['Test']['primary'])
+        self.assertEqual('INTVAR', self.puml_tables['Test']['primary']['col'])
 
     def test_add_column_foreign(self):
         self.clear()
 
         with self.assertRaises(NoTableException):
-            self.add_column_foreign('col', 'INTVAR', '')
+            self.add_column_foreign('col', 'INTVAR', 'other.col')
 
         self.add_table('Test')
-        self.add_column_foreign('col', 'INTVAR', '')
+        self.add_column_foreign('col', 'INTVAR', 'other.col')
         self.assertIn('col', self.puml_tables['Test']['foreign'])
+        self.assertEqual(('INTVAR', 'other.col'), self.puml_tables['Test']['foreign']['col'])
 
     def test_clear(self):
         self.clear()
