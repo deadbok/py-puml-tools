@@ -14,15 +14,29 @@ Test SQLParseTable class.
 """
 from sqlparsetables import SQLParseTables
 import unittest
+import sqlite3
 
-
-class SQLTestBase(unittest.TestCase):
+class SQLTestBase(SQLParseTables, unittest.TestCase):
     subtest = 0
     results = False
+    current_table = None
+    tables_struct = dict()
 
     def add_table(self, name):
+        """
+        Test adding of tables. This is implemented in the base, as all test
+        create new tables.
+
+        :param name: Name of the new table.
+        """
         self.results = True
-        self.assertEqual(name, self.table_name)
+        table_names = self.tables_struct.keys()
+        if self.subtest != 0:
+            with self.subTest('Test {}'.format(str(self.subtest))):
+                self.assertIn(name, table_names)
+                self.current_table = name
+        else:
+            self.assertIn(name, self.table_names)
 
     def add_column(self, name, type):
         self.results = True
@@ -32,7 +46,6 @@ class SQLTestBase(unittest.TestCase):
         else:
             self.fail('Called add_column')
 
-
     def add_column_primary(self, name, type):
         self.results = True
         if self.subtest != 0:
@@ -41,8 +54,7 @@ class SQLTestBase(unittest.TestCase):
         else:
             self.fail('Called add_column_primary')
 
-
-    def add_column_foreign(self, name, type):
+    def add_column_foreign(self, name, type, reference):
         self.results = True
         if self.subtest != 0:
             with self.subTest('Test {}'.format(str(self.subtest))):
@@ -50,162 +62,183 @@ class SQLTestBase(unittest.TestCase):
         else:
             self.fail('Called add_column_foreign')
 
-
     def tearDown(self):
         self.assertTrue(self.results, 'No results from parser.')
 
 
-class SQLParseTableTest(SQLParseTables, SQLTestBase):
+class SQLParseTableTest(SQLTestBase):
     """CREATE TABLE"""
-    table_name = 'Test'
-    var_name = 'col'
-    var_type = 'INTVAR'
+    tables_struct = {
+        'Test': {
+            'col': ('INTVAR', False, False)
+        }
+    }
 
     def test_table(self):
         """Test simple CREATE TABLE statements"""
         self.subtest += 1
-        self.parse(
-            'CREATE TABLE {} ( {} {} );'.format(self.table_name, self.var_name,
-                                                self.var_type))
-        self.subtest += 1
-        self.parse(
-            'CREATE TABLE [{}] ( {} {} );'.format(self.table_name,
-                                                  self.var_name,
-                                                  self.var_type))
-        self.subtest += 1
-        self.parse(
-            'CREATE TABLE {} ( [{}] {} );'.format(self.table_name,
-                                                   self.var_name,
-                                                   self.var_type))
-        self.subtest += 1
-        self.parse(
-            'CREATE TABLE [{}] ( [{}] [{}] );'.format(self.table_name,
-                                                     self.var_name,
-                                                     self.var_type))
+        sql = 'CREATE TABLE {} ( {} {} {});'.format(
+            'Test',
+            'col',
+            self.tables_struct['Test']['col'][0],
+            'PRIMARY KEY' if self.tables_struct['Test']['col'][1] else '')
+        self.parse(sql)
 
-    def add_table(self, name):
-        self.results = True
-        with self.subTest('Test {}'.format(str(self.subtest))):
-            self.assertEqual(name, self.table_name)
+        self.subtest += 1
+        sql = 'CREATE TABLE [{}] ( [{}] [{}] [{}]);'.format(
+            'Test',
+            'col',
+            self.tables_struct['Test']['col'][0],
+            'PRIMARY KEY' if self.tables_struct['Test']['col'][1] else '')
+        self.parse(sql)
 
     def add_column(self, name, type):
         self.results = True
         with self.subTest('Test {}'.format(str(self.subtest))):
-            self.assertEqual(name, self.var_name)
-            self.assertEqual(type, self.var_type)
+            self.assertNotEqual(self.current_table, None,
+                                'Trying to instert column with no active table.')
+            column_names = [col_name for col_name in
+                            self.tables_struct[self.current_table].keys()]
+            self.assertIn(name, column_names)
+            self.assertEqual(type,
+                             self.tables_struct[self.current_table][name][0])
 
     def tearDown(self):
         self.assertTrue(self.results, 'No results from parser.')
 
 
-class SQLParsePrimaryKeyTest(SQLParseTables, SQLTestBase):
+class SQLParsePrimaryKeyTest(SQLTestBase):
     """PRIMARY KEY"""
-    table_name = 'Test'
-    var_name = 'col'
-    var_type = 'INTVAR'
-    pk_name = 'PK_col'
+    tables_struct = {
+        'Test': {
+            'col': ('INTVAR', True, False)
+        }
+    }
 
     def test_table1(self):
         """Test PRIMARY KEY at column definition"""
         self.subtest += 1
-        self.parse(
-            'CREATE TABLE {} ( {} {} PRIMARY KEY );'.format(self.table_name,
-                                                            self.var_name,
-                                                            self.var_type))
+        sql = 'CREATE TABLE {} ( {} {} {});'.format(
+            'Test',
+            'col',
+            self.tables_struct['Test']['col'][0],
+            'PRIMARY KEY' if self.tables_struct['Test']['col'][1] else '')
+        self.parse(sql)
+
         self.subtest += 1
-        self.parse(
-            'CREATE TABLE [{}] ( {} {} PRIMARY KEY );'.format(self.table_name,
-                                                              self.var_name,
-                                                              self.var_type))
-        self.subtest += 1
-        self.parse(
-            'CREATE TABLE {} ( [{}] {} PRIMARY KEY );'.format(self.table_name,
-                                                              self.var_name,
-                                                              self.var_type))
-        self.subtest += 1
-        self.parse(
-            'CREATE TABLE [{}] ( [{}] {} PRIMARY KEY );'.format(
-                self.table_name,
-                self.var_name, self.var_type))
+        sql = 'CREATE TABLE [{}] ( [{}] [{}] {});'.format(
+            'Test',
+            'col',
+            self.tables_struct['Test']['col'][0],
+            'PRIMARY KEY' if self.tables_struct['Test']['col'][1] else '')
+        self.parse(sql)
 
     def test_table2(self):
         """Test PRIMARY KEY as CONSTRAINT statement"""
         self.subtest += 1
-        self.parse(
-            'CREATE TABLE {} ( {} {}, CONSTRAINT {} PRIMARY KEY({}) );'.format(
-                self.table_name,
-                self.var_name, self.var_type, self.pk_name, self.var_name))
-        self.subtest += 1
-        self.parse(
-            'CREATE TABLE [{}] ( {} {}, CONSTRAINT {} PRIMARY KEY({}) );'.format(
-                self.table_name,
-                self.var_name, self.var_type, self.pk_name, self.var_name))
-        self.subtest += 1
-        self.parse(
-            'CREATE TABLE {} ( [{}] {}, CONSTRAINT {} PRIMARY KEY({}) );'.format(
-                self.table_name,
-                self.var_name, self.var_type, self.pk_name, self.var_name))
-        self.parse(
-            'CREATE TABLE {} ( {} {}, CONSTRAINT [{}] PRIMARY KEY({}) );'.format(
-                self.table_name,
-                self.var_name, self.var_type, self.pk_name, self.var_name))
-        self.subtest += 1
-        self.parse(
-            'CREATE TABLE {} ( {} {}, CONSTRAINT {} PRIMARY KEY([{}]) );'.format(
-                self.table_name,
-                self.var_name, self.var_type, self.pk_name, self.var_name))
-        self.subtest += 1
-        self.parse(
-            'CREATE TABLE [{}] ( [{}] {}, CONSTRAINT [{}] PRIMARY KEY([{}]) );'.format(
-                self.table_name,
-                self.var_name, self.var_type, self.pk_name, self.var_name))
+        sql = 'CREATE TABLE {} ( {} {}, CONSTRAINT pk_test PRIMARY KEY({}));'.format(
+            'Test',
+            'col',
+            self.tables_struct['Test']['col'][0],
+            'col')
+        self.parse(sql)
 
-    def add_table(self, name):
-        with self.subTest('Test {}'.format(str(self.subtest))):
-            self.results = True
-            self.assertEqual(name, self.table_name)
+        self.subtest += 1
+        sql = 'CREATE TABLE [{}] ( [{}] [{}], CONSTRAINT pk_test PRIMARY KEY({}));'.format(
+            'Test',
+            'col',
+            self.tables_struct['Test']['col'][0],
+            'col')
+        self.parse(sql)
 
     def add_column_primary(self, name, type):
+        self.results = True
         with self.subTest('Test {}'.format(str(self.subtest))):
-            self.results = True
-            self.assertEqual(name, self.var_name)
-            self.assertEqual(type, self.var_type)
+            self.assertNotEqual(self.current_table, None,
+                                'Trying to instert column with no active table.')
+            column_names = [col_name for col_name in
+                            self.tables_struct[self.current_table].keys()]
+            self.assertIn(name, column_names)
+            self.assertEqual(type,
+                             self.tables_struct[self.current_table][name][0])
 
     def tearDown(self):
         self.assertTrue(self.results, 'No results from parser.')
 
 
-class SQLParseForeignKeyTest(SQLParseTables, SQLTestBase):
-    """FOREIGN KEY
-
-    [CONSTRAINT [symbol]] FOREIGN KEY
-    [index_name] (index_col_name, ...)
-    REFERENCES tbl_name (index_col_name,...)
-    [ON DELETE reference_option]
-    [ON UPDATE reference_option]
-
-reference_option:
-    RESTRICT | CASCADE | SET NULL | NO ACTION | SET DEFAULT"""
-    table_name = 'Test'
-    var_name = 'col'
-    var_type = 'INTVAR'
-    con_name = 'CS_col'
-    fk_name = 'FK_col'
-    ref = 'other.col'
-
-    subtest = 0
+class SQLParseForeignKeyTest(SQLTestBase):
+    """FOREIGN KEY"""
+    foreign = False
+    tables_struct = {
+        'Test': {
+            'col': ('INTVAR', True, 'other(col)')
+        },
+        'other': {
+            'col': ('INTVAR', True, False)
+        }
+    }
 
     def test_table(self):
         """Test CONSTRAINT FOREIGN KEY"""
-        self.parse(
-            'CREATE TABLE {} ( {} {}, CONSTRAINT {} FOREIGN KEY ({}) REFERENCES {});'.format(
-                self.table_name,
-                self.var_name, self.var_type, self.con_name, self.fk_name,
-                self.ref))
+        self.subtest += 1
+        sql = """
+CREATE TABLE {} ( {} {} {});
+CREATE TABLE {} ( {} {} {}, CONSTRAINT {} FOREIGN KEY ({}) REFERENCES {} );
+""".format('other',
+           'col',
+           self.tables_struct['other']['col'][0],
+           'PRIMARY KEY' if self.tables_struct['Test']['col'][1] else '',
+           'Test',
+           'col',
+           self.tables_struct['Test']['col'][0],
+           'PRIMARY KEY' if self.tables_struct['Test']['col'][1] else '',
+           'fk_test',
+           'col',
+           self.tables_struct['Test']['col'][2])
 
-    def add_table(self, name):
+        self.parse(sql)
+
+    def add_column_primary(self, name, type):
         self.results = True
-        self.assertEqual(name, self.table_name)
+        with self.subTest('Test {}'.format(str(self.subtest))):
+            self.assertNotEqual(self.current_table, None,
+                                'Trying to insert column with no active table.')
+            column_names = [col_name for col_name in
+                            self.tables_struct[self.current_table].keys()]
+            self.assertIn(name, column_names)
+            self.assertEqual(type,
+                             self.tables_struct[self.current_table][name][0])
+
+    def add_column_foreign(self, name, type, reference):
+        self.results = True
+        self.foreign = True
+        with self.subTest('Test {}'.format(str(self.subtest))):
+            self.assertNotEqual(self.current_table, None,
+                                'Trying to insert column with no active table.')
+            column_names = [col_name for col_name in
+                            self.tables_struct[self.current_table].keys()]
+            self.assertIn(name, column_names)
+            self.assertEqual(type,
+                             self.tables_struct[self.current_table][name][0])
+            self.assertEqual(reference,
+                             'other.col')
+
+    def tearDown(self):
+        self.assertTrue(self.foreign, 'No foreign keys added.')
+        SQLTestBase.tearDown(self)
+
+class SQLParseWrongInputTest(SQLTestBase):
+    def test_table(self):
+        """Test malformed SQL input"""
+        self.subtest += 1
+        sql = 'dlkjeoi lkdlnj'
+
+        with self.assertRaises(sqlite3.OperationalError):
+            self.parse(sql)
+
+    def tearDown(self):
+        pass
+
 
 
 if __name__ == '__main__':

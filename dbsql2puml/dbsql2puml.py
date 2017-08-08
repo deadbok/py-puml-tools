@@ -9,14 +9,19 @@
 # Program to convert a database diagram written in a subset of PlantUML to
 # SQLite syntax that will create the actual tables and relations.
 #
-# Version 0.0.1
+# Version 0.5.0 (2017-08-08)
+#  * Add parsing of SQL.
+#  * Conversion of tables into Plant UML format.
+#  * Rendering of Plant UML database graph template.
+#
+# Version 0.0.1 (2017-08-03)
 #  * Skeleton
 #
 
 """
 Name: dbsql2puml.py
 Author: Martin Bo Kristensen Grønholdt.
-Version: 0.0.1 (2017-08-03)
+Version: 0.5.0
 
 Convert SQL file to a Plant UML database diagram.
 """
@@ -25,7 +30,7 @@ import argparse
 from sql2puml import SQL2PUML
 
 # Program version.
-__VERSION__ = '0.0.1'
+__VERSION__ = '0.5.0'
 
 
 def parse_commandline():
@@ -55,7 +60,9 @@ def main():
     # Parse the command line.
     sql_file = parse_commandline()
 
+    # Create an instance of the converter class.
     puml = SQL2PUML()
+    # Call it with the file and print the result.
     print(puml.transform(sql_file))
 
 

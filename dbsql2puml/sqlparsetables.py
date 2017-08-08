@@ -17,113 +17,80 @@ am sure it will fall appart given the right input.*
 """
 import re
 from collections import OrderedDict
+import sqlite3
+import tempfile
 
 
 class SQLParseTables:
     tables = OrderedDict()
-    columns = OrderedDict()
-
-    def get_tables(self, sql):
-        """
-        Find and return all CREATE TABLE statements.
-
-        :param sql: String of SQL statements.
-        :return: Dictionary of table names and table definitions.
-        """
-        # Isolate CREATE statements.
-        for match in re.finditer(r'^CREATE\s+TABLE([^\(]+)\s+\(([^\;]+);', sql,
-                                 re.DOTALL):
-            name = match.group(1).strip()
-
-            name_begin = name.find('[')
-            if name_begin > -1:
-                name_end = name.find(']')
-                name = name[name_begin + 1:name_end]
-            else:
-                tokens = name.split(' ')
-                name = tokens[-1]
-
-            self.tables[name] = match.group(2)[:-1]
-
-        return (self.tables)
-
-    def parse_definition(self, definition):
-        keywords = ['CONSTRAINT', 'INDEX', 'KEY', 'FULLTEXT', 'SPATIAL',
-                    'CHECK', 'FOREIGN', 'PRIMARY']
-
-        # Initial column values.
-        column = {'name': '', 'type': '', 'primary': False, 'foreign': False}
-        tokens = definition.split(' ')
-
-        if tokens[0] not in keywords:
-            print(str(tokens))
-            column['name'] = tokens[0].strip('[]')
-            del tokens[0]
-            column['type'] = tokens[0].strip('[]')
-            del tokens[0]
-
-            if len(tokens) > 0:
-                if tokens[0] == 'PRIMARY':
-                    column['primary'] = True
-
-            self.columns[column['name']] = column
-        else:
-            while len(tokens) > 0:
-                if tokens[0] == 'CONSTRAINT':
-                    del tokens[0]
-
-                    if tokens[0].startswith('['):
-                        while not tokens[0].endswith(']'):
-                            del tokens[0]
-                        
-                    column['name'] = tokens[1].strip('[]')
-                    if tokens[2] == 'PRIMARY':
-                        column['primary'] = True
-
-
-
-                del tokens[0]
-
-            self.columns[column['name']] = column
-
-        return (column)
+    db = None
+    cursor = None
 
     def parse(self, sql):
         """
-    Use sqlparse to parse the SQL file.
+        Use sqlparse to parse the SQL file.
 
-    MySQL CREATE TABLE syntax: https://dev.mysql.com/doc/refman/5.7/en/create-table.html
+        MySQL CREATE TABLE syntax: https://dev.mysql.com/doc/refman/5.7/en/create-table.html
 
-    :param sql: The SQL string to parse.
-    :return:
-    """
+        :param sql: The SQL string to parse.
+        :return:
+        """
+        db_file = tempfile.NamedTemporaryFile('w')
+        self.db = sqlite3.connect(db_file.name)
+        self.db.execute('pragma foreign_keys=ON')
+        self.cursor = self.db.cursor()
+
+        # If 'sql' is not a string assume it is a file.
         if not isinstance(sql, str):
             sql = str(sql.read())
 
-        for name, definitions in self.get_tables(sql).items():
-            self.add_table(name)
+        self.cursor.executescript(sql)
+        self.cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table';")
+        tables = self.cursor.fetchall()
+        self.tables = OrderedDict()
+        for table in tables:
+            self.tables[table[0]] = OrderedDict()
+            self.cursor.execute('PRAGMA table_info({})'.format(table[0]))
 
-            # Split them into a list by the endning comma.
-            definition_list = re.split(r',\s+', definitions)
+            for sql_column in self.cursor.fetchall():
+                column = dict()
+                column['name'] = sql_column[1]
+                column['type'] = sql_column[2]
+                column['primary'] = False
+                if sql_column[5] == 1:
+                    column['primary'] = True
+                column['foreign'] = False
 
-            self.columns = OrderedDict()
-            for definition in definition_list:
-                definition = definition.strip().rstrip()
-                self.parse_definition(definition)
+                self.tables[table[0]][sql_column[1]] = column
 
-        for column in self.columns.values():
-            if column['primary'] is True:
-                self.add_column_primary(column['name'], column['type'])
-            elif column['foreign'] is True:
-                self.add_column_foreign(column['name'], column['type'])
-            else:
-                self.add_column(column['name'], column['type'])
+            self.cursor.execute('PRAGMA foreign_key_list({});'.format(table[0]))
+            for foreign_key in self.cursor.fetchall():
+                src_column = foreign_key[3]
+                for name, column in self.tables[table[0]].items():
+                    if name == src_column:
+                        self.tables[table[0]][name]['foreign'] = '{}.{}'.format(foreign_key[2], foreign_key[4])
+
+        self.db.close()
+        self.cursor = None
+
+        for table_name, columns in self.tables.items():
+            self.add_table(table_name)
+
+            for column in columns.values():
+                if column['primary'] is True:
+                    self.add_column_primary(column['name'], column['type'])
+                if column['foreign'] is not False:
+                    self.add_column_foreign(column['name'], column['type'], column['foreign'])
+                if ((column['primary'] is not True) and
+                        (column['foreign'] is False)):
+                    self.add_column(column['name'], column['type'])
 
     def add_table(self, name):
         raise NotImplementedError(
             "Please implement the 'add_table' method in a derived class.")
 
-    def add_colum(self, name, type):
+    def add_column(self, name, type):
         raise NotImplementedError(
             "Please implement the 'add_column' method in a derived class.")
 
@@ -131,6 +98,7 @@ class SQLParseTables:
         raise NotImplementedError(
             "Please implement the 'add_column_primary' method in a derived class.")
 
-    def add_column_foreign(self, name, type):
+    def add_column_foreign(self, name, type, reference):
         raise NotImplementedError(
             "Please implement the 'add_column_foreign' method in a derived class.")
+

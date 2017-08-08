@@ -13,21 +13,14 @@ Author: Martin Bo Kristensen Grønholdt.
 Parse SQL tables into a Plant UML databse diagram.
 """
 from sqlparsetables import SQLParseTables
+from collections import OrderedDict
+
+class NoTableException(ValueError):
+    pass
 
 
 class SQL2PUML(SQLParseTables):
-    def __init__(self):
-        # True if processing a table.
-        self.in_table = False
-        # PUML output.
-        self.puml = '';
-
-    def initialise_puml(self):
-        """
-        Add the intital setup to the PUML document.
-        :return: None
-        """
-        self.puml = """
+    puml_template = """
 @startuml
 
 skinparam monochrome true
@@ -42,38 +35,64 @@ scale 2
 !define foreign_key(x) <b>FK: </b>x
 hide methods
 hide stereotypes
-       """
+
+{}
+@enduml
+    """
+    puml_tables = OrderedDict()
+    # Equals name of the table if processing a table.
+    current_table = None
 
     def add_table(self, name):
         """
         Add the intital setup to the PUML document.
         :return: None
         """
-        # Close the last table.
-        if self.in_table:
-            self.puml += '\n}\n'
+        self.puml_tables[name] = {
+            'default': OrderedDict(),
+            'foreign': OrderedDict(),
+            'primary': OrderedDict()
+        }
+        self.current_table = name
 
-        self.puml += '\nent({}) '.format(name)
-        self.puml += '{'
-        self.in_table = True
-
-    def add_column_var(self, name, type):
+    def add_column(self, name, type):
         """
         Add column with a simple variable.
         :return: None
         """
-        self.puml += '\n\t{} {}'.format(name, type)
+        if self.current_table is None:
+            raise NoTableException
 
-    def end_puml(self):
+        self.puml_tables[self.current_table]['default'][name] = type
+
+
+    def add_column_primary(self, name, type):
         """
-        Add the PUML document end code.
+        Add column with a simple variable.
         :return: None
         """
-        # Close the last table.
-        if self.in_table:
-            self.puml += '\n}\n'
+        """
+        Add column with a simple variable.
+        :return: None
+        """
+        if self.current_table is None:
+            raise NoTableException
 
-        self.puml += '\n@enduml'
+        self.puml_tables[self.current_table]['primary'][name] = type
+
+    def add_column_foreign(self, name, type, reference):
+        """
+        Add column with a simple variable.
+        :return: None
+        """
+        if self.current_table is None:
+            raise NoTableException
+
+        self.puml_tables[self.current_table]['foreign'][name] = type
+
+    def clear(self):
+        self.puml_tables = OrderedDict()
+        self.current_table = None
 
     def transform(self, sql):
         """
@@ -81,7 +100,22 @@ hide stereotypes
         :param sql: SQL file.
         :return: PUML document string.
         """
-        self.initialise_puml()
+        self.clear()
         self.parse(sql)
-        self.end_puml()
-        return (self.puml)
+        puml_lines = list()
+
+        for table_name, table in self.puml_tables.items():
+            puml_lines.append('table({}) '.format(table_name) + '{')
+            for cname, ctype  in table['primary'].items():
+                puml_lines.append('\tprimary_key({}) {}'.format(cname, ctype))
+            for cname, ctype  in table['foreign'].items():
+                puml_lines.append('\tforeign_key({}) {}'.format(cname, ctype))
+            if len(table['default'].keys()) > 0:
+                puml_lines.append('\t---')
+            for cname, ctype  in table['default'].items():
+                puml_lines.append('\t{} {}'.format(cname, ctype))
+            puml_lines.append('}')
+            puml_lines.append('')
+
+        content = '\n'.join(puml_lines)
+        return (self.puml_template.format(content))
