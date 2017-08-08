@@ -146,6 +146,12 @@ table(orderProductTable) {
 \tforeign_key(productId) INTEGER
 }
 
+cityTable "0..n" -- "1..1" countryTable
+customerTable "0..n" -- "1..1" cityTable
+orderTable "0..n" -- "1..1" customerTable
+orderProductTable "0..n" -- "1..1" orderTable
+orderProductTable "0..n" -- "1..1" productTable
+
 @enduml
 """.strip()
         self.assertEqual(result, self.transform(sql).strip(),
