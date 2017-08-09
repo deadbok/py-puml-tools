@@ -9,6 +9,9 @@
 # Program to convert a database diagram written in a subset of PlantUML to
 # SQLite syntax that will create the actual tables and relations.
 #
+# Version 0.9.0 (2017-08-09)
+#  * Update Plant UML syntax for foreign keys.
+#
 # Version 0.8.0 (2017-08-08)
 #  * Add README.
 #

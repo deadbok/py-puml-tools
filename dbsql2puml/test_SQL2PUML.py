@@ -104,7 +104,7 @@ scale 2
 !define ent(x) class x << (E,#FFAAAA) >>
 
 !define primary_key(x) <b>PK: x</b>
-!define foreign_key(x) <b>FK: </b>x
+!define foreign_key(x,reference) <b>FK: </b>x
 hide methods
 hide stereotypes
 
@@ -122,14 +122,14 @@ table(countryTable) {
 
 table(cityTable) {
 \tprimary_key(idCity) INTEGER
-\tforeign_key(country) TEXT
+\tforeign_key(country,countryTable.idCountry) TEXT
 \t---
 \tcity TEXT
 }
 
 table(customerTable) {
 \tprimary_key(idCust) INTEGER
-\tforeign_key(city) TEXT
+\tforeign_key(city,cityTable.idCity) TEXT
 \t---
 \taddress TEXT
 \temail TEXT
@@ -138,15 +138,15 @@ table(customerTable) {
 
 table(orderTable) {
 \tprimary_key(idOrder) INTEGER
-\tforeign_key(custId) INTEGER
+\tforeign_key(custId,customerTable.idCust) INTEGER
 \t---
 \tdate DATE
 }
 
 table(orderProductTable) {
 \tprimary_key(orderId) INTEGER
-\tforeign_key(orderId) INTEGER
-\tforeign_key(productId) INTEGER
+\tforeign_key(orderId,orderTable.idOrder) INTEGER
+\tforeign_key(productId,productTable.idProd) INTEGER
 }
 
 cityTable "0..n" -- "1..1" countryTable

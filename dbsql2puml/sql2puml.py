@@ -39,7 +39,7 @@ scale 2
 !define ent(x) class x << (E,#FFAAAA) >>
 
 !define primary_key(x) <b>PK: x</b>
-!define foreign_key(x) <b>FK: </b>x
+!define foreign_key(x,reference) <b>FK: </b>x
 hide methods
 hide stereotypes
 
@@ -138,7 +138,7 @@ hide stereotypes
 
             # Add PUML lines for all foreign keys.
             for cname, cval  in table['foreign'].items():
-                puml_lines.append('\tforeign_key({}) {}'.format(cname, cval[0]))
+                puml_lines.append('\tforeign_key({},{}) {}'.format(cname, cval[1], cval[0]))
 
             # Add separator if there is regular columns.
             if len(table['default'].keys()) > 0:
