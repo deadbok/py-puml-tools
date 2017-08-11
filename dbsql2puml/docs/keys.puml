@@ -1,0 +1,34 @@
+@startuml
+
+skinparam monochrome true
+skinparam linetype ortho
+scale 2
+
+!define table(x) class x << (T,#FFAAAA) >>
+!define view(x) class x << (V,#FFAAAA) >>
+!define ent(x) class x << (E,#FFAAAA) >>
+
+!define primary_key(x) <b>PK: x</b>
+!define foreign_key(x,reference) <b>FK: </b>x
+hide methods
+hide stereotypes
+
+table(Name) {
+    primary_key(id) INTEGER
+    foreign_key(addressId, Address.id)
+    ---
+    first TEXT
+    last TEXT
+}
+
+table(Address) {
+    primary_key(id) INTEGER
+    ---
+    street
+    zip
+    country
+}
+
+Name "0..n" -- "1..1" Address
+
+@enduml

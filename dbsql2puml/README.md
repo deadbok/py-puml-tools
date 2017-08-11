@@ -59,49 +59,49 @@ Becomes this Plant UML diagram:
     !define ent(x) class x << (E,#FFAAAA) >>
     
     !define primary_key(x) <b>PK: x</b>
-    !define foreign_key(x, reference) <b>FK: </b>x
+    !define foreign_key(x,reference) <b>FK: </b>x
     hide methods
     hide stereotypes
     
     table(productTable) {
-            primary_key(idProd) INTEGER
-            ---
-            product TEXT
+        primary_key(idProd) INTEGER
+        ---
+        product TEXT
     }
     
     table(countryTable) {
-            primary_key(idCountry) INTEGER
-            ---
-            country TEXT
+        primary_key(idCountry) INTEGER
+        ---
+        country TEXT
     }
     
     table(cityTable) {
-            primary_key(idCity) INTEGER
-            foreign_key(country, countryTable.idCountry) TEXT
-            ---
-            city TEXT
+        primary_key(idCity) INTEGER
+        foreign_key(country,countryTable.idCountry) TEXT
+        ---
+        city TEXT
     }
     
     table(customerTable) {
-            primary_key(idCust) INTEGER
-            foreign_key(city, cityTable.idCity) TEXT
-            ---
-            address TEXT
-            email TEXT
-            name TEXT
+        primary_key(idCust) INTEGER
+        foreign_key(city,cityTable.idCity) TEXT
+        ---
+        address TEXT
+        email TEXT
+        name TEXT
     }
     
     table(orderTable) {
-            primary_key(idOrder) INTEGER
-            foreign_key(custId, customerTable.idCust) INTEGER
-            ---
-            date DATE
+        primary_key(idOrder) INTEGER
+        foreign_key(custId,customerTable.idCust) INTEGER
+        ---
+        date DATE
     }
     
     table(orderProductTable) {
-            primary_key(orderId) INTEGER
-            foreign_key(orderId, orderTable.idOrder) INTEGER
-            foreign_key(productId, productTable.idProd) INTEGER
+        primary_key(orderId) INTEGER
+        foreign_key(orderId,orderTable.idOrder) INTEGER
+        foreign_key(productId,productTable.idProd) INTEGER
     }
     
     cityTable "0..n" -- "1..1" countryTable
@@ -111,7 +111,6 @@ Becomes this Plant UML diagram:
     orderProductTable "0..n" -- "1..1" productTable
     
     @enduml
-
     
 Which renders to this diagram:
 
@@ -134,49 +133,49 @@ Run the program with the SQL file as argument.
     !define ent(x) class x << (E,#FFAAAA) >>
     
     !define primary_key(x) <b>PK: x</b>
-    !define foreign_key(x) <b>FK: </b>x
+    !define foreign_key(x,reference) <b>FK: </b>x
     hide methods
     hide stereotypes
     
     table(productTable) {
-            primary_key(idProd) INTEGER
-            ---
-            product TEXT
+        primary_key(idProd) INTEGER
+        ---
+        product TEXT
     }
     
     table(countryTable) {
-            primary_key(idCountry) INTEGER
-            ---
-            country TEXT
+        primary_key(idCountry) INTEGER
+        ---
+        country TEXT
     }
     
     table(cityTable) {
-            primary_key(idCity) INTEGER
-            foreign_key(country) TEXT
-            ---
-            city TEXT
+        primary_key(idCity) INTEGER
+        foreign_key(country,countryTable.idCountry) TEXT
+        ---
+        city TEXT
     }
     
     table(customerTable) {
-            primary_key(idCust) INTEGER
-            foreign_key(city) TEXT
-            ---
-            address TEXT
-            email TEXT
-            name TEXT
+        primary_key(idCust) INTEGER
+        foreign_key(city,cityTable.idCity) TEXT
+        ---
+        address TEXT
+        email TEXT
+        name TEXT
     }
     
     table(orderTable) {
-            primary_key(idOrder) INTEGER
-            foreign_key(custId) INTEGER
-            ---
-            date DATE
+        primary_key(idOrder) INTEGER
+        foreign_key(custId,customerTable.idCust) INTEGER
+        ---
+        date DATE
     }
     
     table(orderProductTable) {
-            primary_key(orderId) INTEGER
-            foreign_key(orderId) INTEGER
-            foreign_key(productId) INTEGER
+        primary_key(orderId) INTEGER
+        foreign_key(orderId,orderTable.idOrder) INTEGER
+        foreign_key(productId,productTable.idProd) INTEGER
     }
     
     cityTable "0..n" -- "1..1" countryTable
@@ -186,4 +185,3 @@ Run the program with the SQL file as argument.
     orderProductTable "0..n" -- "1..1" productTable
     
     @enduml
-
