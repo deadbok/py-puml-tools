@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # --------------------------------------------------------------------------------
 # "THE BEER-WARE LICENSE" (Revision 42):
@@ -6,206 +6,216 @@
 # you can do whatever you want with this stuff. If we meet some day, and you think
 # this stuff is worth it, you can buy me a beer in return. Martin B. K. Grønholdt
 # --------------------------------------------------------------------------------
-# Program to parse Python classes and write their info to PlantUML files
-# (see http://plantuml.com/) that can be used to generate UML files and GraphViz
-# renderings of classes.
-#
-# Missing:
-#  * Inheritance parsing
-#  * Does not like end='' in print.
-#
-# History:
-# Version 0.1.9
-#  * Added package argument.
-#
-# Version 0.1.8
-#  * Nicer command line help.
-#
-# Version 0.1.7
-# * Fixed bug, when no namespace.
-#
-# Version 0.1.6
-# * Functional namespace support
-#
-# Version 0.1.5
-# * Add members from the class definition.
-# * Do not write empty file.
-# * Add namespace.
-#
-# Version 0.1.4
-# * Output file name is now a parameter.
-#
-# Version 0.1.3
-# * Change output file name to add ".db.puml" to the original file name.
-#
-# Version 0.1.2
-#  * Exception handling.
-#
-# Version 0.1.1
-#  * Comments.
-#
-# Version 0.1.0
-#  * First working version.
+"""
+Program to parse Python classes and write their info to PlantUML files
+(see http://plantuml.com/) that can be used to generate UML files and GraphViz
+renderings of classes.
 
-import argparse
+Missing:
+ * Inheritance parsing
+"""
+# pylint: disable=C0103
 import ast
-
 __VERSION__ = '0.1.9'
+TAB = '  '
 
-
-class ClassParser(ast.NodeVisitor):
+class ClassDef:
     """
-    Class to parse the stuff we're interested in from a class.
+    The parsed class definition.
 
-     * Methods and their visibility.
-     * Members created in __init__ and their visibility.
+    Elements are grouped by type in arrays while parsing, printing done last.
+    """
+    def __init__(self, node):
+        self.classname = node.name
+        self.classvars = []
+        self.members = []
+        self.methods = []
+
+    @staticmethod
+    def visibility(name):
+        """Detects the visibility of given member name, as plantuml convention symbol.
+
+       @returns '-' for private, '+' for public
+        """
+        if name.startswith('_'):
+            return '-'
+        return '+'
+
+    def add_classvar(self, name):
+        "Registers a class variable"
+        self.classvars.append(name)
+
+    def add_member(self, name):
+        "Registers an instance variable"
+        self.members.append(name)
+
+    def add_method(self, node):
+        "Registers a method"
+        self.methods.append(node)
+
+    def done(self, context):
+        "Signals end of class parsing."
+        context.print_classdef(self)
+
+class TreeVisitor(ast.NodeVisitor):
+    """`ast.NodeVisitor` is the primary tool for ‘scanning’ the tree.
+    To use it, subclass it and override methods visit_Foo, corresponding to the
+    node classes (see Meet the Nodes).
     """
     # List to put the class data.
-    puml_classes = list()
+    def __init__(self, context=None):
+        self.context = context
+        self.classdef = None
+        self.constructor = False
 
     def visit_ClassDef(self, node):
         """
-        Class visitor that parses the info we want, when encountering a class definition.
+        Overrides AST class definition visitor.
 
         :param node: The node of the class.
         """
-        # Dictionary containing the interesting parts of the classes structure
-        puml_class = dict()
-        puml_class['name'] = node.name
-        puml_class['members'] = list()
-        puml_class['methods'] = list()
+        # push context
+        prev_classdef = self.classdef
+        self.classdef = ClassDef(node)
 
         # Run through all children of the class definition.
         for child in node.body:
-            # If we have a function definition, store it.
-            if isinstance(child, ast.FunctionDef):
-                # Check if it is "private".
-                if child.name.startswith('__'):
-                    puml_class['methods'].append('-' + child.name)
-                else:
-                    puml_class['methods'].append('+' + child.name)
+            self.visit(child)
 
-                # Check if this s the constructor.
-                if child.name == '__init__':
-                    # Find all assignment expressions in the constructor.
-                    for code in child.body:
-                        if isinstance(code, ast.Assign):
-                            # Find attributes since we want "self." + "something"
-                            for target in code.targets:
-                                if isinstance(target, ast.Attribute):
-                                    # If the value is a name and its id is self.
-                                    if isinstance(target.value, ast.Name):
-                                        if target.value.id == 'self':
-                                            # Check if it is "private".
-                                            if target.attr.startswith('__'):
-                                                puml_class['members'].append(
-                                                    '-' + target.attr)
-                                            else:
-                                                puml_class['members'].append(
-                                                    '+' + target.attr)
+        # finished class parsing, report it now.
+        self.classdef.done(self.context)
 
-            # Look for assignments at the top level of the class.
-            if isinstance(child, ast.Assign):
-                for target in child.targets:
-                    # Get the target member name.
-                    if isinstance(target, ast.Name):
-                        # Append the member.
-                        if target.id.startswith('__'):
-                            puml_class['members'].append('-' + target.id)
-                        else:
-                            puml_class['members'].append('+' + target.id)
+        # restore previous context
+        self.classdef = prev_classdef
 
-        # Save the class.
-        self.puml_classes.append(puml_class)
+    def visit_FunctionDef(self, node):
+        "Overrides AST function definition visitor"
+        if self.classdef:
+            # Check if this s the constructor.
+            if node.name == '__init__':
+                self.constructor = True
+                # Find all assignment expressions in the constructor.
+                for code in node.body:
+                    self.visit(code)
+                self.constructor = False
+            self.classdef.add_method(node)
+
+    def visit_Assign(self, node):
+        "Overrides AST assignment statement visitor"
+        if self.constructor:
+            # Find attributes since we want "self." + "something"
+            for target in node.targets:
+                if isinstance(target, ast.Attribute):
+                    # If the value is a name and its id is self.
+                    if isinstance(target.value, ast.Name):
+                        if target.value.id == 'self':
+                            self.classdef.add_member(target.attr)
+
+        elif self.classdef:
+            # Look for class variables (shared by all instances)
+            for target in node.targets:
+                # Get the target member name.
+                if isinstance(target, ast.Name):
+                    self.classdef.add_classvar(target.id)
+
+class PUML_Generator:
+    "Formats data for PlantUML."
+    def __init__(self, sourcename, dest, package=''):
+        self.dest = dest
+        self.tabs = 0
+
+        # make namespace hierarchy from package or path
+        names = sourcename.lstrip('./').split('/')
+        if package != '':
+            self.namespaces = package.rstrip('.').split('.')
+        else:
+            self.namespaces = names[:-1]
+        modname = names[-1].split('.')[0]
+        self.namespaces.append(modname)
+
+    @property
+    def depth(self):
+        "Levels of current namespace nesting"
+        return len(self.namespaces)
+
+    def indent(self, *args):
+        "Formats given arguments to destination with proper indentation."
+        if self.tabs:
+            print(TAB * self.tabs, end="", file=self.dest)
+        print(*args, file=self.dest)
+
+    def header(self):
+        "Outputs file header: settings and namespaces."
+        self.indent("@startuml\n"
+                    "skinparam monochrome true\n"
+                    "skinparam classAttributeIconSize 0\n"
+                    "scale 2\n")
+
+        # Create the namespaces
+        for name in self.namespaces:
+            self.indent('namespace ' + name + ' {')
+            self.tabs += 1
+
+    def footer(self):
+        "Outputs file footer: close namespaces and marker."
+        # Close the namespaces
+        while self.tabs > 0:
+            self.tabs -= 1
+            self.indent('}')
+
+        # End the PlantUML files.
+        self.indent('@enduml')
 
 
-if __name__ == '__main__':
+    def print_classdef(self, classdef):
+        """Prints class definition as plantuml script."""
+        # TODO show base classes
+        self.indent("class", classdef.classname, "{")
+        self.tabs += 1
+        for m in classdef.classvars:
+            self.indent("{static}", classdef.visibility(m) + m)
+        for m in classdef.members:
+            self.indent(classdef.visibility(m) + m)
+        for m in classdef.methods:
+            # TODO print args (inspect signature ?)
+            self.indent(classdef.visibility(m.name) + m.name + "()")
+        self.tabs -= 1
+        self.indent("}")
+
+def cli_parser():
+    "Builds a command line parser suitable for this tool."
+    import argparse
+
     # Takes a python file as a parameter.
     parser = argparse.ArgumentParser(description='py2puml' +
-                                                 ' v{}'.format(__VERSION__) +
-                                                 ' by Martin B. K. Grønholdt' +
-                                                 '\nCreate PlantUML classes' +
-                                                 ' from Python source code.')
+                                     ' v{}'.format(__VERSION__) +
+                                     ' by Martin B. K. Grønholdt' +
+                                     ' and Michelle Baert'
+                                     '\nCreate PlantUML classes' +
+                                     ' from Python source code.')
     parser.add_argument('py_file', type=argparse.FileType('r'),
                         help='The Python source file to parse.')
     parser.add_argument('puml_file', type=argparse.FileType('w'),
                         help='The name of the ouput PlantUML file.')
     parser.add_argument('--package', default='', dest='package',
                         help='The package that the input file belongs to.')
-    args = parser.parse_args()
+    return parser
 
+if __name__ == '__main__':
+
+    cl_args = cli_parser().parse_args()
     try:
         # Use AST to parse the file.
-        tree = ast.parse(args.py_file.read())
-        class_writer = ClassParser()
-        class_writer.visit(tree)
+        tree = ast.parse(cl_args.py_file.read())
+        gen = PUML_Generator(cl_args.py_file.name, package=cl_args.package, dest=cl_args.puml_file)
+        gen.header()
+        visitor = TreeVisitor(gen)
+        visitor.visit(tree)
+        gen.footer()
 
-
-        names = args.py_file.name
-        names = names.lstrip('./').split('/')[0:-1]
-
-        if args.package != '':
-            package = args.package.rstrip('.')
-            namespace = package.split('.')
-        else:
-            namespace = []
-            for name in names:
-                namespace.append(name)
-
-        if len(class_writer.puml_classes) > 0:
-            tabs = 0
-            # Write the beginnings of the PlantUML file.
-            args.puml_file.write('{0}@startuml\n'.format('\t' * tabs))
-            args.puml_file.write(
-                '{0}skinparam monochrome true\n'.format('\t' * tabs))
-            args.puml_file.write(
-                '{0}skinparam classAttributeIconSize 0\n'.format('\t' * tabs))
-            args.puml_file.write('{0}scale 2\n\n'.format('\t' * tabs))
-
-            # Create the namespace
-            if len(namespace) > 0:
-                for name in namespace:
-                    args.puml_file.write(
-                        '{}namespace '.format('\t' * tabs) + name + ' {\n\n')
-                    tabs += 1
-
-            # Write the resulting classes in PlantUML format.
-            for puml_class in class_writer.puml_classes:
-
-                args.puml_file.write(
-                    '{}class '.format('\t' * tabs) + puml_class[
-                        'name'] + ' {\n')
-                tabs += 1
-
-                for member in puml_class['members']:
-                    args.puml_file.write(
-                        '{}'.format('\t' * tabs) + member + '\n')
-
-                for method in puml_class['methods']:
-                    args.puml_file.write(
-                        '{}'.format('\t' * tabs) + method + '()\n')
-
-                tabs -= 1
-                args.puml_file.write('{}'.format('\t' * tabs) + '}\n\n')
-
-
-            # Close the namespace
-            if len(namespace) > 0:
-                for name in namespace:
-                    tabs -= 1
-                    args.puml_file.write('{}'.format('\t' * tabs) + '}\n')
-
-            # End the PlantUML files.
-            args.puml_file.write('{}@enduml'.format('\t' * tabs))
-            print('.'.join(namespace) + '.' + puml_class['name'] + ' ',
-                      end='')
-        else:
-            print('No classes.', end='')
-        print()
-
-    except IOError:
-        print('I/O error.')
     except SyntaxError as see:
         print('Syntax error in ', end='')
-        print(args.py_file.name + ':' + str(see.lineno) + ':' + str(
+        print(cl_args.py_file.name + ':' + str(see.lineno) + ':' + str(
             see.offset) + ': ' + see.text)
+    except BaseException as err:
+        print(err)

@@ -1,0 +1,6 @@
+[Master]
+init-hook= 'import os, pylint, sys; sys.path.append(os.path.abspath(os.path.pardir))'
+[Drafts]
+init-hook1= 'import sys; sys.path.append("/home/mich/Devlp/pytools/py-puml-tools/py2puml")'
+init-hook2= 'import os, pylint, sys; sys.path.append(os.path.dirname(pylint.config.PYLINTRC))'
+init-hook3= 'import os, pylint, sys; sys.path.append(os.path.abspath(os.path.pardir))'

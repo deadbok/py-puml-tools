@@ -1,0 +1,41 @@
+@startuml
+skinparam monochrome true
+skinparam classAttributeIconSize 0
+scale 2
+
+namespace py2puml {
+  class ClassDef {
+    +classname
+    +classvars
+    +members
+    +methods
+    -__init__()
+    +visibility()
+    +add_classvar()
+    +add_member()
+    +add_method()
+    +done()
+  }
+  class TreeVisitor {
+    +context
+    +classdef
+    +constructor
+    -__init__()
+    +visit_ClassDef()
+    +visit_FunctionDef()
+    +visit_Assign()
+  }
+  class PUML_Generator {
+    +dest
+    +tabs
+    +namespaces
+    +namespaces
+    -__init__()
+    +depth()
+    +indent()
+    +header()
+    +footer()
+    +print_classdef()
+  }
+}
+@enduml
