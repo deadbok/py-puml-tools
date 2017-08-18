@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # --------------------------------------------------------------------------------
 # "THE BEER-WARE LICENSE" (Revision 42):
+
 # <martin.groenholdt@gmail.com> wrote this file. As long as you retain this notice
 # you can do whatever you want with this stuff. If we meet some day, and you think
 # this stuff is worth it, you can buy me a beer in return. Martin B. K. Grønholdt
@@ -16,10 +17,14 @@ Missing:
 """
 # pylint: disable=C0103
 import ast
+import logging
+logging.basicConfig(level='DEBUG', filename="py2puml.log", filemode='w')
+logger = logging.getLogger()
+
 __VERSION__ = '0.1.9'
 TAB = '  '
 
-class ClassDef:
+class ClassInfo:
     """
     The parsed class definition.
 
@@ -27,6 +32,7 @@ class ClassDef:
     """
     def __init__(self, node):
         self.classname = node.name
+        self.bases = node.bases
         self.classvars = []
         self.members = []
         self.methods = []
@@ -55,7 +61,7 @@ class ClassDef:
 
     def done(self, context):
         "Signals end of class parsing."
-        context.print_classdef(self)
+        context.print_classinfo(self)
 
 class TreeVisitor(ast.NodeVisitor):
     """`ast.NodeVisitor` is the primary tool for ‘scanning’ the tree.
@@ -65,7 +71,7 @@ class TreeVisitor(ast.NodeVisitor):
     # List to put the class data.
     def __init__(self, context=None):
         self.context = context
-        self.classdef = None
+        self.classinfo = None
         self.constructor = False
 
     def visit_ClassDef(self, node):
@@ -75,22 +81,22 @@ class TreeVisitor(ast.NodeVisitor):
         :param node: The node of the class.
         """
         # push context
-        prev_classdef = self.classdef
-        self.classdef = ClassDef(node)
+        prev_classinfo = self.classinfo
+        self.classinfo = ClassInfo(node)
 
         # Run through all children of the class definition.
         for child in node.body:
             self.visit(child)
 
         # finished class parsing, report it now.
-        self.classdef.done(self.context)
+        self.classinfo.done(self.context)
 
         # restore previous context
-        self.classdef = prev_classdef
+        self.classinfo = prev_classinfo
 
     def visit_FunctionDef(self, node):
         "Overrides AST function definition visitor"
-        if self.classdef:
+        if self.classinfo:
             # Check if this s the constructor.
             if node.name == '__init__':
                 self.constructor = True
@@ -98,7 +104,7 @@ class TreeVisitor(ast.NodeVisitor):
                 for code in node.body:
                     self.visit(code)
                 self.constructor = False
-            self.classdef.add_method(node)
+            self.classinfo.add_method(node)
 
     def visit_Assign(self, node):
         "Overrides AST assignment statement visitor"
@@ -109,14 +115,14 @@ class TreeVisitor(ast.NodeVisitor):
                     # If the value is a name and its id is self.
                     if isinstance(target.value, ast.Name):
                         if target.value.id == 'self':
-                            self.classdef.add_member(target.attr)
+                            self.classinfo.add_member(target.attr)
 
-        elif self.classdef:
+        elif self.classinfo:
             # Look for class variables (shared by all instances)
             for target in node.targets:
                 # Get the target member name.
                 if isinstance(target, ast.Name):
-                    self.classdef.add_classvar(target.id)
+                    self.classinfo.add_classvar(target.id)
 
 class PUML_Generator:
     "Formats data for PlantUML."
@@ -167,18 +173,22 @@ class PUML_Generator:
         self.indent('@enduml')
 
 
-    def print_classdef(self, classdef):
+    def print_classinfo(self, classinfo):
         """Prints class definition as plantuml script."""
         # TODO show base classes
-        self.indent("class", classdef.classname, "{")
+        for base in classinfo.bases:
+            self.indent(base.id, "<|--", classinfo.classname)
+        # class and instance members
+        self.indent("class", classinfo.classname, "{")
         self.tabs += 1
-        for m in classdef.classvars:
-            self.indent("{static}", classdef.visibility(m) + m)
-        for m in classdef.members:
-            self.indent(classdef.visibility(m) + m)
-        for m in classdef.methods:
+        for m in classinfo.classvars:
+            self.indent("{static}", classinfo.visibility(m) + m)
+        for m in classinfo.members:
+            self.indent(classinfo.visibility(m) + m)
+        for m in classinfo.methods:
             # TODO print args (inspect signature ?)
-            self.indent(classdef.visibility(m.name) + m.name + "()")
+            logger.info("Method: %r \n%s", m, ast.dump(m))
+            self.indent(classinfo.visibility(m.name) + m.name + "()")
         self.tabs -= 1
         self.indent("}")
 
@@ -207,7 +217,9 @@ if __name__ == '__main__':
     try:
         # Use AST to parse the file.
         tree = ast.parse(cl_args.py_file.read())
-        gen = PUML_Generator(cl_args.py_file.name, package=cl_args.package, dest=cl_args.puml_file)
+        gen = PUML_Generator(cl_args.py_file.name,
+                             dest=cl_args.puml_file,
+                             package=cl_args.package)
         gen.header()
         visitor = TreeVisitor(gen)
         visitor.visit(tree)

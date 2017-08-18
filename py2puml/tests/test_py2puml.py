@@ -1,29 +1,43 @@
 """Tests for py2puml (pytest)"""
+import ast
 import io
 import pytest
-# pylint: disable= invalid-name, redefined-outer-name, missing-docstring
-# pylint  disable=unused-wildcard-import, redefined-outer-name
-from py2puml import ClassDef, TreeVisitor, PUML_Generator
+# pylint: disable= invalid-name, redefined-outer-name, missing-docstring, no-self-use, too-few-public-methods
+
+from py2puml import ClassInfo, TreeVisitor, PUML_Generator
 
 
-class Test_ClassDef(object):
-    def test_visibility(self):
-        assert ClassDef.visibility('__builtin__') == '-'
-        assert ClassDef.visibility('_private') == '-'
-        assert ClassDef.visibility('public') == '+'
+@pytest.fixture
+def ast_class0():
+    """AST tree of an empty class"""
+    return ast.parse("class MyClass: pass").body[0]
 
-    def test_init(self):
-        pass
-        #cdef = ClassDef()
+@pytest.fixture
+def ast_class1():
+    """AST tree of a simple class"""
+    tree = ast.parse("class MyClass:\n"
+                     "    i = 12345\n"
+                     "\n"
+                     "    def f(self):\n"
+                     "        return 'hello world'\n")
+    return tree.body[0]
 
-    def test_add_member(self):
-        pass
-        #cdef = ClassDef()
-        #cdef.add_member('member')
-        #assert cdef.members == ['member']
+class Test_ClassInfo(object):
+    @staticmethod
+    def test_visibility():
+        assert ClassInfo.visibility('__builtin__') == '-'
+        assert ClassInfo.visibility('_private') == '-'
+        assert ClassInfo.visibility('public') == '+'
 
-class Test_TreeVisitor(object):
-    pass
+    def test_init(self, ast_class1):
+        print(ast.dump(ast_class1))
+        cdef = ClassInfo(ast_class1)
+        assert cdef.classname == "MyClass"
+
+    def test_add_member(self, ast_class0):
+        cdef = ClassInfo(ast_class0)
+        cdef.add_member('member')
+        assert cdef.members == ['member']
 
 # pylint  disable=redefined-outer-name #                 W0621
 @pytest.fixture
@@ -67,3 +81,30 @@ namespace some {
 }
 @enduml
 """
+class Test_TreeVisitor(object):
+    def test_init(self):
+        visitor = TreeVisitor(ast.Module())
+        assert visitor
+
+    def py2puml(self, sourcefile):
+        gen = PUML_Generator(sourcefile, dest=io.StringIO(), package='')
+        with open(sourcefile) as f:
+            tree = ast.parse(f.read())
+        visitor = TreeVisitor(gen)
+        visitor.visit(tree)
+        return gen.dest.getvalue()
+
+    def test_visit(self):
+        puml = self.py2puml('examples/person.py')
+        assert puml == "class Person {\n" \
+                       "  +firstname\n" \
+                       "  +lastname\n" \
+                       "  -__init__()\n" \
+                       "  +Name()\n" \
+                       "}\n" \
+                       "Person <|-- Employee\n" \
+                       "class Employee {\n" \
+                       "  +staffnumber\n" \
+                       "  -__init__()\n" \
+                       "  +GetEmployee()\n" \
+                       "}\n"

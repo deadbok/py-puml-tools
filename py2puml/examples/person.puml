@@ -1,0 +1,22 @@
+@startuml
+skinparam monochrome true
+skinparam classAttributeIconSize 0
+scale 2
+
+namespace examples {
+  namespace person {
+    class Person {
+      +firstname
+      +lastname
+      -__init__()
+      +Name()
+    }
+    Person <|-- Employee
+    class Employee {
+      +staffnumber
+      -__init__()
+      +GetEmployee()
+    }
+  }
+}
+@enduml
