@@ -176,9 +176,12 @@ class PUML_Generator:
 
     def print_classinfo(self, classinfo):
         """Prints class definition as plantuml script."""
-        # TODO show base classes
+        # FIXME handling of composite classes base names (ex: ast.NodeVisitor)
         for base in classinfo.bases:
-            self.indent(base.id, "<|--", classinfo.classname)
+            logger.debug("Processing %s base class [%s]: %r", classinfo.classname,
+                         isinstance(base, ast.Name), ast.dump(base))
+            if isinstance(base, ast.Name):
+                self.indent(base.id, "<|--", classinfo.classname)
         # class and instance members
         self.indent("class", classinfo.classname, "{")
         self.tabs += 1
@@ -191,7 +194,7 @@ class PUML_Generator:
             logger.info("Method: %r \n%s", m, ast.dump(m))
             self.indent(classinfo.visibility(m.name) + m.name + "()")
         self.tabs -= 1
-        self.indent("}")
+        self.indent("}\n")
 
 def cli_parser():
     "Builds a command line parser suitable for this tool."

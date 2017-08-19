@@ -119,20 +119,19 @@ class Test_TreeVisitor(object):
         with open(sourcefile) as f:
             tree = ast.parse(f.read())
         visitor = TreeVisitor(gen)
+        gen.header()
         visitor.visit(tree)
+        gen.footer()
         return gen.dest.getvalue()
 
     def test_visit(self):
         puml = self.py2puml('examples/person.py')
-        assert puml == "class Person {\n" \
-                       "  +firstname\n" \
-                       "  +lastname\n" \
-                       "  -__init__()\n" \
-                       "  +Name()\n" \
-                       "}\n" \
-                       "Person <|-- Employee\n" \
-                       "class Employee {\n" \
-                       "  +staffnumber\n" \
-                       "  -__init__()\n" \
-                       "  +GetEmployee()\n" \
-                       "}\n"
+        with open('examples/person.puml') as f:
+            expected = f.read()
+        assert puml == expected
+
+    def test_visit1(self):
+        puml = self.py2puml('py2puml.py')
+        with open('examples/py2puml.puml') as f:
+            expected = f.read()
+        assert puml == expected
