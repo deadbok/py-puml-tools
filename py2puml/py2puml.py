@@ -212,13 +212,12 @@ def cli_parser():
     import argparse
 
     # Takes a python file as a parameter.
-    parser = argparse.ArgumentParser(prog='py2uml',
-                                     description='py2puml' +
-                                     ' v{}'.format(__VERSION__) +
-                                     ' by Martin B. K. Grønholdt' +
-                                     ' and Michelle Baert'
-                                     '\nCreate PlantUML classes' +
-                                     ' from Python source code.')
+    parser = argparse.ArgumentParser(
+        prog='py2uml',
+        description='py2puml' +
+        ' from Martin B. K. Grønholdt, v' + __VERSION__ + ' by Michelle Baert.\n' +
+        'Create PlantUML classes from Python source code.',
+        formatter_class=argparse.RawDescriptionHelpFormatter )
     parser.add_argument('py_file', type=argparse.FileType('r'),
                         help='The Python source file to parse.')
     parser.add_argument('puml_file', type=argparse.FileType('w'),
