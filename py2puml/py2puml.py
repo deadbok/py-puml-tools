@@ -18,14 +18,19 @@ Missing:
 # pylint: disable=C0103
 import ast
 import logging
+import logging.config
 import os
 import sys
-
-logging.basicConfig(level='DEBUG', filename="py2puml.log", filemode='w')
-logger = logging.getLogger()
+import yaml
 
 __VERSION__ = '0.2.0'
 TAB = '  '
+
+# logging.basicConfig(level='DEBUG', filename="py2puml.log", filemode='w')
+# logging.config.fileConfig('logging.conf')
+with open('logging.yaml') as f:
+    logging.config.dictConfig(yaml.load(f))
+logger = logging.getLogger(__name__)
 
 class ClassInfo:
     """
@@ -181,6 +186,7 @@ class PUML_Generator:
             logger.debug("Processing %s base class [%s]: %r", classinfo.classname,
                          isinstance(base, ast.Name), ast.dump(base))
             if isinstance(base, ast.Name):
+                # TODO ignore base if 'object'
                 self.indent(base.id, "<|--", classinfo.classname)
         # class and instance members
         self.indent("class", classinfo.classname, "{")

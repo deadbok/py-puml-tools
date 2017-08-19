@@ -1,0 +1,36 @@
+version: 1
+disable_existing_loggers: false
+loggers:
+  root:
+    level: DEBUG
+    handlers: [console, file]
+  __main__:
+    level: DEBUG
+    handlers: [console]
+    formatter: standard
+  py2puml:
+    level: DEBUG
+    handlers: [file]
+formatters:
+  standard:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  tracing:
+    format: "%(asctime)s [%(name)s] %(levelname)s in %(funcName)s at %(pathname)s:%(lineno)d : %(message)s"
+handlers:
+  console:
+    class : logging.StreamHandler
+    stream  : ext://sys.stdout
+    formatter: standard
+  file:
+    class: logging.FileHandler
+    formatter: tracing
+    filename: py2puml.log
+    mode: w
+    encoding: utf8
+  rotating:
+    class: logging.handlers.RotatingFileHandler
+    formatter: standard
+    filename: demor.log
+    maxBytes: 1048576 # 1MB
+    backupCount: 2
+    encoding: utf8
