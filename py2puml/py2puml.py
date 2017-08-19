@@ -19,6 +19,7 @@ Missing:
 
 # standard lib imports
 import ast
+import configparser
 import logging
 import logging.config
 import os
@@ -29,7 +30,18 @@ import astor
 import yaml
 
 __VERSION__ = '0.2.0'
+
+# puml indentation unit
 TAB = '  '
+# list of possible configuration files,
+# all existing will be loaded unless a specific config arg is provided
+CONFIG_FILENAMES = (
+    os.path.join(os.path.dirname(__file__), 'py2puml.ini'),
+    os.path.expanduser('~/.config/py2puml.ini'),
+    os.path.expanduser('~/.py2puml.ini'),
+    '.py2puml.ini',
+    'py2puml.ini',
+)
 
 # logging.basicConfig(level='DEBUG', filename="py2puml.log", filemode='w')
 # logging.config.fileConfig('logging.conf')
@@ -140,8 +152,9 @@ class TreeVisitor(ast.NodeVisitor):
 
 class PUML_Generator:
     "Formats data for PlantUML."
-    def __init__(self, sourcename, dest, root=''):
+    def __init__(self, sourcename, dest, config=None, root=''):
         self.dest = dest
+        self.config = config
         self.tabs = 0
 
         # make namespace hierarchy from root if supplied
@@ -164,11 +177,11 @@ class PUML_Generator:
 
     def header(self):
         "Outputs file header: settings and namespaces."
-        self.indent("@startuml\n"
-                    "skinparam monochrome true\n"
-                    "skinparam classAttributeIconSize 0\n"
-                    "scale 2\n")
-
+        self.indent("@startuml")
+        if self.config:
+            prolog = self.config.get('puml','prolog', fallback=None)
+            if prolog:
+                self.indent(prolog + "\n")
         # Create the namespaces
         for name in self.namespaces:
             self.indent('namespace ' + name + ' {')
@@ -217,7 +230,7 @@ def cli_parser():
         description='py2puml' +
         ' from Martin B. K. Grønholdt, v' + __VERSION__ + ' by Michelle Baert.\n' +
         'Create PlantUML classes from Python source code.',
-        formatter_class=argparse.RawDescriptionHelpFormatter )
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('py_file', type=argparse.FileType('r'),
                         help='The Python source file to parse.')
     parser.add_argument('puml_file', type=argparse.FileType('w'),
@@ -226,20 +239,29 @@ def cli_parser():
     parser.add_argument('--root', #default='',
                         help='Project root directory.'
                         ' Create namespaces from there')
+    parser.add_argument('--config',
+                        help='Configuration file (replace defaults)')
     return parser
 
 if __name__ == '__main__':
-
+    cfg = configparser.ConfigParser()
     cl_args = cli_parser().parse_args()
     try:
         # Use AST to parse the file.
         tree = ast.parse(cl_args.py_file.read())
         cl_args.py_file.close()
 
+        # provided config file completely replaces global settings
+        if cl_args.config:
+            cfg.read(cl_args.config)
+        else:
+            cfg.read(CONFIG_FILENAMES)
+
         # setup .puml generator
         gen = PUML_Generator(cl_args.py_file.name,
                              dest=cl_args.puml_file,
-                             root=cl_args.root)
+                             root=cl_args.root,
+                             config=cfg)
 
         # The tree visitor will use it
         visitor = TreeVisitor(gen)

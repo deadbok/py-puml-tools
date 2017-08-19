@@ -1,4 +1,5 @@
 """Tests for py2puml (pytest)"""
+import configparser
 import ast
 import io
 import pytest
@@ -6,6 +7,8 @@ import pytest
 
 from py2puml import ClassInfo, TreeVisitor, PUML_Generator
 
+cfg = configparser.ConfigParser()
+cfg.read('py2puml.ini')
 
 @pytest.fixture
 def ast_class0():
@@ -43,12 +46,12 @@ class Test_ClassInfo(object):
 @pytest.fixture
 def gen_no_ns():
     dest = io.StringIO()
-    return PUML_Generator('some/sub/path/module.py', dest=dest)
+    return PUML_Generator('some/sub/path/module.py', dest=dest, config=cfg)
 
 @pytest.fixture
 def gen_with_ns():
     dest = io.StringIO()
-    return PUML_Generator('some/sub/path/module.py', dest=dest, root='.')
+    return PUML_Generator('some/sub/path/module.py', dest=dest, root='.', config=cfg)
 
 class Test_PUML_Generator_noNS(object):
     def test_init(self, gen_no_ns):
@@ -115,7 +118,7 @@ class Test_TreeVisitor(object):
         assert visitor
 
     def py2puml(self, sourcefile):
-        gen = PUML_Generator(sourcefile, dest=io.StringIO(), root='')
+        gen = PUML_Generator(sourcefile, dest=io.StringIO(), root='', config=cfg)
         with open(sourcefile) as f:
             tree = ast.parse(f.read())
         visitor = TreeVisitor(gen)
