@@ -41,23 +41,52 @@ class Test_ClassInfo(object):
 
 # pylint  disable=redefined-outer-name #                 W0621
 @pytest.fixture
-def gen1():
+def gen_no_ns():
     dest = io.StringIO()
     return PUML_Generator('some/sub/path/module.py', dest=dest)
 
-class Test_PUML_Generator(object):
-    def test_init(self, gen1):
-        assert gen1.namespaces == ['some', 'sub', 'path', 'module']
-        assert gen1.tabs == 0
+@pytest.fixture
+def gen_with_ns():
+    dest = io.StringIO()
+    return PUML_Generator('some/sub/path/module.py', dest=dest, root='.')
 
-    def test_depth(self, gen1):
-        assert gen1.depth == 4
+class Test_PUML_Generator_noNS(object):
+    def test_init(self, gen_no_ns):
+        assert gen_no_ns.namespaces == []
+        assert gen_no_ns.depth == 0
 
-    def test_header(self, gen1):
-        gen1.header()
-        assert gen1.tabs == 4
-        assert gen1.dest.tell() == 161
-        assert gen1.dest.getvalue() == """\
+    def test_header(self, gen_no_ns):
+        assert gen_no_ns.tabs == 0
+        gen_no_ns.header()
+        assert gen_no_ns.tabs == 0
+        assert gen_no_ns.dest.tell() == 80
+        assert gen_no_ns.dest.getvalue() == """\
+@startuml
+skinparam monochrome true
+skinparam classAttributeIconSize 0
+scale 2
+
+"""
+
+    def test_footer(self, gen_no_ns):
+        gen_no_ns.header()
+        p = gen_no_ns.dest.tell()
+        gen_no_ns.footer()
+        assert gen_no_ns.dest.getvalue()[p:] == "@enduml\n"
+
+class Test_PUML_Generator_NS(object):
+    def test_init(self, gen_with_ns):
+        assert gen_with_ns.namespaces == ['some', 'sub', 'path', 'module']
+        assert gen_with_ns.depth == 4
+
+    def test_header(self, gen_with_ns):
+        # initially no indentation
+        assert gen_with_ns.tabs == 0
+        gen_with_ns.header()
+        # generating header increases indentation
+        assert gen_with_ns.tabs == gen_with_ns.depth
+        assert gen_with_ns.dest.tell() == 161
+        assert gen_with_ns.dest.getvalue() == """\
 @startuml
 skinparam monochrome true
 skinparam classAttributeIconSize 0
@@ -69,12 +98,11 @@ namespace some {
       namespace module {
 """
 
-    def test_footer(self, gen1, capsys): # pylint: disable=unused-argument
-        gen1.header()
-        p = gen1.dest.tell()
-        gen1.footer()
-        # out, err = capsys.readouterr()
-        assert gen1.dest.getvalue()[p:] == """\
+    def test_footer(self, gen_with_ns):
+        gen_with_ns.header()
+        p = gen_with_ns.dest.tell()
+        gen_with_ns.footer()
+        assert gen_with_ns.dest.getvalue()[p:] == """\
       }
     }
   }
@@ -87,7 +115,7 @@ class Test_TreeVisitor(object):
         assert visitor
 
     def py2puml(self, sourcefile):
-        gen = PUML_Generator(sourcefile, dest=io.StringIO(), package='')
+        gen = PUML_Generator(sourcefile, dest=io.StringIO(), root='')
         with open(sourcefile) as f:
             tree = ast.parse(f.read())
         visitor = TreeVisitor(gen)

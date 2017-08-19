@@ -18,10 +18,13 @@ Missing:
 # pylint: disable=C0103
 import ast
 import logging
+import os
+import sys
+
 logging.basicConfig(level='DEBUG', filename="py2puml.log", filemode='w')
 logger = logging.getLogger()
 
-__VERSION__ = '0.1.9'
+__VERSION__ = '0.2.0'
 TAB = '  '
 
 class ClassInfo:
@@ -126,18 +129,16 @@ class TreeVisitor(ast.NodeVisitor):
 
 class PUML_Generator:
     "Formats data for PlantUML."
-    def __init__(self, sourcename, dest, package=''):
+    def __init__(self, sourcename, dest, root=''):
         self.dest = dest
         self.tabs = 0
 
-        # make namespace hierarchy from package or path
-        names = sourcename.lstrip('./').split('/')
-        if package != '':
-            self.namespaces = package.rstrip('.').split('.')
+        # make namespace hierarchy from root if supplied
+        if root:
+            names = os.path.splitext(os.path.relpath(sourcename, root))[0]
+            self.namespaces = names.split(os.path.sep)
         else:
-            self.namespaces = names[:-1]
-        modname = names[-1].split('.')[0]
-        self.namespaces.append(modname)
+            self.namespaces = []
 
     @property
     def depth(self):
@@ -197,7 +198,8 @@ def cli_parser():
     import argparse
 
     # Takes a python file as a parameter.
-    parser = argparse.ArgumentParser(description='py2puml' +
+    parser = argparse.ArgumentParser(prog='py2uml',
+                                     description='py2puml' +
                                      ' v{}'.format(__VERSION__) +
                                      ' by Martin B. K. Grønholdt' +
                                      ' and Michelle Baert'
@@ -206,9 +208,11 @@ def cli_parser():
     parser.add_argument('py_file', type=argparse.FileType('r'),
                         help='The Python source file to parse.')
     parser.add_argument('puml_file', type=argparse.FileType('w'),
+                        nargs='?', default=sys.stdout,
                         help='The name of the ouput PlantUML file.')
-    parser.add_argument('--package', default='', dest='package',
-                        help='The package that the input file belongs to.')
+    parser.add_argument('--root', #default='',
+                        help='Project root directory.'
+                        ' Create namespaces from there')
     return parser
 
 if __name__ == '__main__':
@@ -217,11 +221,18 @@ if __name__ == '__main__':
     try:
         # Use AST to parse the file.
         tree = ast.parse(cl_args.py_file.read())
+        cl_args.py_file.close()
+
+        # setup .puml generator
         gen = PUML_Generator(cl_args.py_file.name,
                              dest=cl_args.puml_file,
-                             package=cl_args.package)
-        gen.header()
+                             root=cl_args.root)
+
+        # The tree visitor will use it
         visitor = TreeVisitor(gen)
+
+        # Build output while walking the tree
+        gen.header()
         visitor.visit(tree)
         gen.footer()
 
@@ -229,5 +240,5 @@ if __name__ == '__main__':
         print('Syntax error in ', end='')
         print(cl_args.py_file.name + ':' + str(see.lineno) + ':' + str(
             see.offset) + ': ' + see.text)
-    except BaseException as err:
-        print(err)
+    # except BaseException as err:
+    #     print(err)
