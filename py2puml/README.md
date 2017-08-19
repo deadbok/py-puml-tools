@@ -1,19 +1,58 @@
 # Python source to PlantUML classes
- 
-This program genrates PlantUML classes from Python source code.
 
-## To do
- * Support for connection between classes to make the diagram complete.
+This program generates PlantUML class diagrams from Python source code.
+The source is first parsed by the standard python library
+[ast](https://docs.python.org/3/library/ast.htm) which ensures accurate
+results as long as the syntax is correct.
 
- 
-## Running
+## Features
+  * optionally use namespaces to represent packages/folders
+  * Supports simple and multiple inheritance
+  * Include argument lists
+  * configurable prolog and epilog, useful for styling
 
-Run the program with the Python source file and the output PlantUML file as
-arguments.
+    os.path.join(HOME_DIR, 'py2puml.ini'),
+    os.path.expanduser('~/.config/py2puml.ini'),
+    os.path.expanduser('~/.py2puml.ini'),
+    '.py2puml.ini',
+    'py2puml.ini',
+)
 
-    ./py2puml.py ../dbdia2sql/dbdia2sql.py dbdia2sql.py.puml
-    dbdia2sql.PUMLReader 
+## Command line interface
+
+      usage: py2uml [-h] [--root ROOT] [--config CONFIG] py_file [puml_file]
+
+      py2puml from Martin B. K. Grønholdt, v0.2.0 by Michelle Baert.
+      Create PlantUML classes from Python source code.
+
+      positional arguments:
+        py_file          The Python source file to parse.
+        puml_file        The name of the ouput PlantUML file.
+
+      optional arguments:
+        -h, --help       show this help message and exit
+        --root ROOT      Project root directory. Create namespaces from there
+        --config CONFIG  Configuration file (replace defaults)
+
+      If no config file is provided, settings are loaded
+      sequentially from all available files in :
+            - <PROGRAM_DIR>/py2puml.ini
+            - <USER_HOME>/.config/py2puml.ini
+            - <USER_HOME>/.py2puml.ini
+            - <WORK_DIR>/.py2puml.ini
+            - <WORK_DIR>/py2puml.ini
+
+## Examples
+
+Several examples are provided. Here is how you build a diagram from this program source code:
+
+    $ cd examples
+    $ ../py2puml.py --config custom.ini ../py2puml.py py2puml-custom.puml
+    $ java -jar /usr/local/share/plantuml/plantuml.jar py2puml-custom.puml
 
 **Rendered output**
 
-![dbdia2sql.py classes](dbdia2sql.py.png)
+![py2puml.py classes](examples/py2puml-custom.png)
+
+## TODO
+  * allow several input sources for one plantuml output.

@@ -30,22 +30,23 @@ import astor
 import yaml
 
 __VERSION__ = '0.2.0'
+HOME_DIR = os.path.dirname(__file__)
 
 # puml indentation unit
 TAB = '  '
+
 # list of possible configuration files,
 # all existing will be loaded unless a specific config arg is provided
 CONFIG_FILENAMES = (
-    os.path.join(os.path.dirname(__file__), 'py2puml.ini'),
+    os.path.join(HOME_DIR, 'py2puml.ini'),
     os.path.expanduser('~/.config/py2puml.ini'),
     os.path.expanduser('~/.py2puml.ini'),
     '.py2puml.ini',
     'py2puml.ini',
 )
+LOGGING_CFG = os.path.join(HOME_DIR, 'logging.yaml')
 
-# logging.basicConfig(level='DEBUG', filename="py2puml.log", filemode='w')
-# logging.config.fileConfig('logging.conf')
-with open('logging.yaml') as f:
+with open(LOGGING_CFG) as f:
     logging.config.dictConfig(yaml.load(f))
 logger = logging.getLogger(__name__)
 
@@ -230,6 +231,13 @@ def cli_parser():
         description='py2puml' +
         ' from Martin B. K. Grønholdt, v' + __VERSION__ + ' by Michelle Baert.\n' +
         'Create PlantUML classes from Python source code.',
+        epilog='If no config file is provided, settings are loaded \n' +
+        'sequentially from all available files in :\n' +
+        '      - <PROGRAM_DIR>/py2puml.ini\n' +
+        '      - <USER_HOME>/.config/py2puml.ini\n' +
+        '      - <USER_HOME>/.py2puml.ini\n' +
+        '      - <WORK_DIR>/.py2puml.ini\n' +
+        '      - <WORK_DIR>/py2puml.ini\n',
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('py_file', type=argparse.FileType('r'),
                         help='The Python source file to parse.')
