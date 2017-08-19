@@ -16,11 +16,16 @@ Missing:
  * Inheritance parsing
 """
 # pylint: disable=C0103
+
+# standard lib imports
 import ast
 import logging
 import logging.config
 import os
 import sys
+
+# other imports
+import astor
 import yaml
 
 __VERSION__ = '0.2.0'
@@ -60,8 +65,9 @@ class ClassInfo:
         self.classvars.append(name)
 
     def add_member(self, name):
-        "Registers an instance variable"
-        self.members.append(name)
+        "Registers an instance variable if new"
+        if name not in self.members:
+            self.members.append(name)
 
     def add_method(self, node):
         "Registers a method"
@@ -181,13 +187,11 @@ class PUML_Generator:
 
     def print_classinfo(self, classinfo):
         """Prints class definition as plantuml script."""
-        # FIXME handling of composite classes base names (ex: ast.NodeVisitor)
         for base in classinfo.bases:
-            logger.debug("Processing %s base class [%s]: %r", classinfo.classname,
-                         isinstance(base, ast.Name), ast.dump(base))
-            if isinstance(base, ast.Name):
-                # TODO ignore base if 'object'
-                self.indent(base.id, "<|--", classinfo.classname)
+            expr = astor.to_source(base).rstrip()
+            # ignore base if 'object'
+            if expr != 'object':
+                self.indent(expr, "<|--", classinfo.classname)
         # class and instance members
         self.indent("class", classinfo.classname, "{")
         self.tabs += 1
@@ -196,9 +200,10 @@ class PUML_Generator:
         for m in classinfo.members:
             self.indent(classinfo.visibility(m) + m)
         for m in classinfo.methods:
-            # TODO print args (inspect signature ?)
             logger.info("Method: %r \n%s", m, ast.dump(m))
-            self.indent(classinfo.visibility(m.name) + m.name + "()")
+            arglist = astor.to_source(m.args).rstrip()
+            self.indent("{0}{1}({2})".format(classinfo.visibility(m.name),
+                                             m.name, arglist))
         self.tabs -= 1
         self.indent("}\n")
 

@@ -9,35 +9,35 @@ class ClassInfo {
   +classvars
   +members
   +methods
-  -__init__()
-  +visibility()
-  +add_classvar()
-  +add_member()
-  +add_method()
-  +done()
+  -__init__(self, node)
+  +visibility(name)
+  +add_classvar(self, name)
+  +add_member(self, name)
+  +add_method(self, node)
+  +done(self, context)
 }
 
+ast.NodeVisitor <|-- TreeVisitor
 class TreeVisitor {
   +context
   +classinfo
   +constructor
-  -__init__()
-  +visit_ClassDef()
-  +visit_FunctionDef()
-  +visit_Assign()
+  -__init__(self, context=None)
+  +visit_ClassDef(self, node)
+  +visit_FunctionDef(self, node)
+  +visit_Assign(self, node)
 }
 
 class PUML_Generator {
   +dest
   +tabs
   +namespaces
-  +namespaces
-  -__init__()
-  +depth()
-  +indent()
-  +header()
-  +footer()
-  +print_classinfo()
+  -__init__(self, sourcename, dest, root='')
+  +depth(self)
+  +indent(self, *args)
+  +header(self)
+  +footer(self)
+  +print_classinfo(self, classinfo)
 }
 
 @enduml

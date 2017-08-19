@@ -6,15 +6,15 @@ scale 2
 class Person {
   +firstname
   +lastname
-  -__init__()
-  +Name()
+  -__init__(self, first, last)
+  +Name(self)
 }
 
 Person <|-- Employee
 class Employee {
   +staffnumber
-  -__init__()
-  +GetEmployee()
+  -__init__(self, first, last, staffnum)
+  +GetEmployee(self)
 }
 
 @enduml
