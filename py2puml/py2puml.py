@@ -31,7 +31,7 @@ import yaml
 # this project imports
 from puml_generator import PUML_Generator, PUML_Generator_NS
 
-__VERSION__ = '0.2.1'
+__VERSION__ = '0.2.3'
 HOME_DIR = os.path.dirname(__file__)
 
 # puml indentation unit

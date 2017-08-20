@@ -11,6 +11,9 @@ loggers:
   py2puml:
     level: DEBUG
     handlers: [file]
+  puml_generators:
+    level: DEBUG
+    handlers: [file]
 formatters:
   standard:
     format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -27,11 +30,4 @@ handlers:
     formatter: tracing
     filename: py2puml.log
     mode: w
-    encoding: utf8
-  rotating:
-    class: logging.handlers.RotatingFileHandler
-    formatter: standard
-    filename: demor.log
-    maxBytes: 1048576 # 1MB
-    backupCount: 2
     encoding: utf8
