@@ -195,6 +195,12 @@ class PUML_Generator:
             self.tabs -= 1
             self.indent('}')
 
+        # append the epilog if provided
+        if self.config:
+            epilog = self.config.get('puml','epilog', fallback=None)
+            if epilog:
+                self.indent(epilog + "\n")
+
         # End the PlantUML files.
         self.indent('@enduml')
 

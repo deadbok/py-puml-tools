@@ -11,36 +11,29 @@ results as long as the syntax is correct.
   * Include argument lists
   * configurable prolog and epilog, useful for styling
 
-    os.path.join(HOME_DIR, 'py2puml.ini'),
-    os.path.expanduser('~/.config/py2puml.ini'),
-    os.path.expanduser('~/.py2puml.ini'),
-    '.py2puml.ini',
-    'py2puml.ini',
-)
-
 ## Command line interface
 
-      usage: py2uml [-h] [--root ROOT] [--config CONFIG] py_file [puml_file]
+    usage: py2uml [-h] [--root ROOT] [--config CONFIG] py_file [puml_file]
 
-      py2puml from Martin B. K. Grønholdt, v0.2.0 by Michelle Baert.
-      Create PlantUML classes from Python source code.
+    py2puml from Martin B. K. Grønholdt, v0.2.0 by Michelle Baert.
+    Create PlantUML classes from Python source code.
 
-      positional arguments:
-        py_file          The Python source file to parse.
-        puml_file        The name of the ouput PlantUML file.
+    positional arguments:
+      py_file          The Python source file to parse.
+      puml_file        The name of the ouput PlantUML file.
 
-      optional arguments:
-        -h, --help       show this help message and exit
-        --root ROOT      Project root directory. Create namespaces from there
-        --config CONFIG  Configuration file (replace defaults)
+    optional arguments:
+      -h, --help       show this help message and exit
+      --root ROOT      Project root directory. Create namespaces from there
+      --config CONFIG  Configuration file (replace defaults)
 
-      If no config file is provided, settings are loaded
-      sequentially from all available files in :
-            - <PROGRAM_DIR>/py2puml.ini
-            - <USER_HOME>/.config/py2puml.ini
-            - <USER_HOME>/.py2puml.ini
-            - <WORK_DIR>/.py2puml.ini
-            - <WORK_DIR>/py2puml.ini
+    If no config file is provided, settings are loaded
+    sequentially from all available files in :
+          - <PROGRAM_DIR>/py2puml.ini
+          - <USER_HOME>/.config/py2puml.ini
+          - <USER_HOME>/.py2puml.ini
+          - <WORK_DIR>/.py2puml.ini
+          - <WORK_DIR>/py2puml.ini
 
 ## Examples
 
@@ -53,6 +46,10 @@ Several examples are provided. Here is how you build a diagram from this program
 **Rendered output**
 
 ![py2puml.py classes](examples/py2puml-custom.png)
+
+Of course the diagram can be enriched, with class associations
+for example, by editing the generated .puml file, or maybe with an epilog
+in custom config.
 
 ## TODO
   * allow several input sources for one plantuml output.

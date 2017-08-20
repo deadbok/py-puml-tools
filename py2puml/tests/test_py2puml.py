@@ -62,7 +62,7 @@ class Test_PUML_Generator_noNS(object):
         assert gen_no_ns.tabs == 0
         gen_no_ns.header()
         assert gen_no_ns.tabs == 0
-        assert gen_no_ns.dest.tell() == 80
+        # assert gen_no_ns.dest.tell() == 80
         assert gen_no_ns.dest.getvalue() == """\
 @startuml
 skinparam monochrome true
@@ -75,7 +75,12 @@ scale 2
         gen_no_ns.header()
         p = gen_no_ns.dest.tell()
         gen_no_ns.footer()
-        assert gen_no_ns.dest.getvalue()[p:] == "@enduml\n"
+        assert gen_no_ns.dest.getvalue()[p:] == """\
+' customizable epilog
+' here you may add notes and associations
+
+@enduml
+"""
 
 class Test_PUML_Generator_NS(object):
     def test_init(self, gen_with_ns):
@@ -110,6 +115,9 @@ namespace some {
     }
   }
 }
+' customizable epilog
+' here you may add notes and associations
+
 @enduml
 """
 class Test_TreeVisitor(object):

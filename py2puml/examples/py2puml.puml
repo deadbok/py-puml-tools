@@ -41,4 +41,7 @@ class PUML_Generator {
   +print_classinfo(self, classinfo)
 }
 
+' customizable epilog
+' here you may add notes and associations
+
 @enduml
