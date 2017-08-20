@@ -30,10 +30,16 @@ class TreeVisitor {
 
 class PUML_Generator {
   +dest
+  +root
   +config
-  +tabs
+  +curpath
   +namespaces
-  -__init__(self, sourcename, dest, config=None, root='')
+  +sourcename
+  -__init__(self, dest, root='', config=None)
+  +start_file(self, sourcename)
+  +end_file(self, sourcename=None)
+  +pop_ns(self, count=1)
+  +push_ns(self, name)
   +depth(self)
   +indent(self, *args)
   +header(self)

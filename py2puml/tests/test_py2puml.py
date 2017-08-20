@@ -46,12 +46,12 @@ class Test_ClassInfo(object):
 @pytest.fixture
 def gen_no_ns():
     dest = io.StringIO()
-    return PUML_Generator('some/sub/path/module.py', dest=dest, config=cfg)
+    return PUML_Generator(dest, config=cfg)
 
 @pytest.fixture
 def gen_with_ns():
     dest = io.StringIO()
-    return PUML_Generator('some/sub/path/module.py', dest=dest, root='.', config=cfg)
+    return PUML_Generator(dest, root='.', config=cfg)
 
 class Test_PUML_Generator_noNS(object):
     def test_init(self, gen_no_ns):
@@ -59,9 +59,10 @@ class Test_PUML_Generator_noNS(object):
         assert gen_no_ns.depth == 0
 
     def test_header(self, gen_no_ns):
-        assert gen_no_ns.tabs == 0
+        assert gen_no_ns.depth == 0
         gen_no_ns.header()
-        assert gen_no_ns.tabs == 0
+        gen_no_ns.start_file('some/sub/path/module.py')
+        assert gen_no_ns.depth == 0
         # assert gen_no_ns.dest.tell() == 80
         assert gen_no_ns.dest.getvalue() == """\
 @startuml
@@ -73,6 +74,7 @@ scale 2
 
     def test_footer(self, gen_no_ns):
         gen_no_ns.header()
+        gen_no_ns.start_file('some/sub/path/module.py')
         p = gen_no_ns.dest.tell()
         gen_no_ns.footer()
         assert gen_no_ns.dest.getvalue()[p:] == """\
@@ -84,15 +86,24 @@ scale 2
 
 class Test_PUML_Generator_NS(object):
     def test_init(self, gen_with_ns):
+        assert gen_with_ns.namespaces == []
+        assert gen_with_ns.depth == 0
+
+    def test_start_file(self, gen_with_ns):
+        gen_with_ns.start_file('some/sub/path/module.py')
         assert gen_with_ns.namespaces == ['some', 'sub', 'path', 'module']
         assert gen_with_ns.depth == 4
+        gen_with_ns.start_file('some/sub/other_module.py')
+        assert gen_with_ns.namespaces == ['some', 'sub', 'other_module']
+        assert gen_with_ns.depth == 3
 
     def test_header(self, gen_with_ns):
         # initially no indentation
-        assert gen_with_ns.tabs == 0
+        assert gen_with_ns.depth == 0
         gen_with_ns.header()
+        gen_with_ns.start_file('some/sub/path/module.py')
         # generating header increases indentation
-        assert gen_with_ns.tabs == gen_with_ns.depth
+        assert gen_with_ns.depth == 4
         assert gen_with_ns.dest.tell() == 161
         assert gen_with_ns.dest.getvalue() == """\
 @startuml
@@ -108,6 +119,7 @@ namespace some {
 
     def test_footer(self, gen_with_ns):
         gen_with_ns.header()
+        gen_with_ns.start_file('some/sub/path/module.py')
         p = gen_with_ns.dest.tell()
         gen_with_ns.footer()
         assert gen_with_ns.dest.getvalue()[p:] == """\
@@ -120,18 +132,23 @@ namespace some {
 
 @enduml
 """
+    #TODO test static methods and class variables
+    #TODO test multiple input files
+
 class Test_TreeVisitor(object):
     def test_init(self):
         visitor = TreeVisitor(ast.Module())
         assert visitor
 
     def py2puml(self, sourcefile):
-        gen = PUML_Generator(sourcefile, dest=io.StringIO(), root='', config=cfg)
+        gen = PUML_Generator(dest=io.StringIO(), root='', config=cfg)
         with open(sourcefile) as f:
             tree = ast.parse(f.read())
         visitor = TreeVisitor(gen)
         gen.header()
+        gen.start_file(sourcefile)
         visitor.visit(tree)
+        gen.end_file(sourcefile)
         gen.footer()
         return gen.dest.getvalue()
 

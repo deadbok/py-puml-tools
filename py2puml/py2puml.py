@@ -29,7 +29,7 @@ import sys
 import astor
 import yaml
 
-__VERSION__ = '0.2.0'
+__VERSION__ = '0.2.1'
 HOME_DIR = os.path.dirname(__file__)
 
 # puml indentation unit
@@ -152,18 +152,54 @@ class TreeVisitor(ast.NodeVisitor):
                     self.classinfo.add_classvar(target.id)
 
 class PUML_Generator:
-    "Formats data for PlantUML."
-    def __init__(self, sourcename, dest, config=None, root=''):
+    """Formats data for PlantUML.
+    """
+    # TODO Extract a derived class for handling namespaces
+    def __init__(self, dest, root='', config=None):
         self.dest = dest
+        self.root = root
         self.config = config
-        self.tabs = 0
+        # self.tabs = 0
+        self.curpath = ''
+        self.namespaces = []
+        self.sourcename = None
 
+    def start_file(self, sourcename):
+        "Sets up the output context for a single python source file"
+        self.sourcename = sourcename
         # make namespace hierarchy from root if supplied
-        if root:
-            names = os.path.splitext(os.path.relpath(sourcename, root))[0]
-            self.namespaces = names.split(os.path.sep)
-        else:
-            self.namespaces = []
+        if self.root:
+            names = os.path.splitext(os.path.relpath(sourcename, self.root))[0]
+            namespaces = names.split(os.path.sep)
+
+            # determine the common path
+            n = 0
+            for d in self.namespaces:
+                if n >= len(namespaces):
+                    break
+                if d != namespaces[n]:
+                    break
+                n += 1
+            self.pop_ns(len(self.namespaces) - n)
+
+            for d in namespaces[n:]:
+                self.push_ns(d)
+
+    def end_file(self, sourcename=None):
+        "Cleans up the output context for a single python source file"
+        logger.info('finished with %s', sourcename)
+        self.sourcename = None
+
+    def pop_ns(self, count=1):
+        "Removes some inner namespaces"
+        for n in range(count): # pylint: disable=unused-variable
+            self.namespaces.pop()
+            self.indent('}')
+
+    def push_ns(self, name):
+        "Adds an inner namespace to the context"
+        self.indent('namespace ' + name + ' {')
+        self.namespaces.append(name)
 
     @property
     def depth(self):
@@ -172,32 +208,27 @@ class PUML_Generator:
 
     def indent(self, *args):
         "Formats given arguments to destination with proper indentation."
-        if self.tabs:
-            print(TAB * self.tabs, end="", file=self.dest)
+        if self.namespaces:
+            print(TAB * self.depth, end="", file=self.dest)
         print(*args, file=self.dest)
 
     def header(self):
         "Outputs file header: settings and namespaces."
         self.indent("@startuml")
         if self.config:
-            prolog = self.config.get('puml','prolog', fallback=None)
+            prolog = self.config.get('puml', 'prolog', fallback=None)
             if prolog:
                 self.indent(prolog + "\n")
-        # Create the namespaces
-        for name in self.namespaces:
-            self.indent('namespace ' + name + ' {')
-            self.tabs += 1
 
     def footer(self):
         "Outputs file footer: close namespaces and marker."
         # Close the namespaces
-        while self.tabs > 0:
-            self.tabs -= 1
-            self.indent('}')
+        while self.namespaces:
+            self.pop_ns(self.depth)
 
         # append the epilog if provided
         if self.config:
-            epilog = self.config.get('puml','epilog', fallback=None)
+            epilog = self.config.get('puml', 'epilog', fallback=None)
             if epilog:
                 self.indent(epilog + "\n")
 
@@ -214,18 +245,18 @@ class PUML_Generator:
                 self.indent(expr, "<|--", classinfo.classname)
         # class and instance members
         self.indent("class", classinfo.classname, "{")
-        self.tabs += 1
         for m in classinfo.classvars:
-            self.indent("{static}", classinfo.visibility(m) + m)
+            self.indent(TAB + "{static}", classinfo.visibility(m) + m)
         for m in classinfo.members:
-            self.indent(classinfo.visibility(m) + m)
+            self.indent(TAB + classinfo.visibility(m) + m)
         for m in classinfo.methods:
             logger.info("Method: %r \n%s", m, ast.dump(m))
             arglist = astor.to_source(m.args).rstrip()
-            self.indent("{0}{1}({2})".format(classinfo.visibility(m.name),
-                                             m.name, arglist))
-        self.tabs -= 1
+            self.indent(TAB + "{0}{1}({2})".format(
+                classinfo.visibility(m.name),
+                m.name, arglist))
         self.indent("}\n")
+        # TODO allow to disable or simplify arg lists output (config)
 
 def cli_parser():
     "Builds a command line parser suitable for this tool."
@@ -245,26 +276,22 @@ def cli_parser():
         '      - <WORK_DIR>/.py2puml.ini\n' +
         '      - <WORK_DIR>/py2puml.ini\n',
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('py_file', type=argparse.FileType('r'),
-                        help='The Python source file to parse.')
-    parser.add_argument('puml_file', type=argparse.FileType('w'),
-                        nargs='?', default=sys.stdout,
-                        help='The name of the ouput PlantUML file.')
-    parser.add_argument('--root', #default='',
-                        help='Project root directory.'
-                        ' Create namespaces from there')
     parser.add_argument('--config',
                         help='Configuration file (replace defaults)')
+    parser.add_argument('-o', '--output', type=argparse.FileType('w'),
+                        nargs='?', default=sys.stdout,
+                        help='The name of the ouput PlantUML file.')
+    parser.add_argument('-r', '--root', #default='',
+                        help='Project root directory.'
+                        ' Create namespaces from there')
+    parser.add_argument('py_file', nargs='+',
+                        help='the Python source files to parse.')
     return parser
 
 if __name__ == '__main__':
     cfg = configparser.ConfigParser()
     cl_args = cli_parser().parse_args()
     try:
-        # Use AST to parse the file.
-        tree = ast.parse(cl_args.py_file.read())
-        cl_args.py_file.close()
-
         # provided config file completely replaces global settings
         if cl_args.config:
             cfg.read(cl_args.config)
@@ -272,8 +299,7 @@ if __name__ == '__main__':
             cfg.read(CONFIG_FILENAMES)
 
         # setup .puml generator
-        gen = PUML_Generator(cl_args.py_file.name,
-                             dest=cl_args.puml_file,
+        gen = PUML_Generator(dest=cl_args.output,
                              root=cl_args.root,
                              config=cfg)
 
@@ -282,8 +308,18 @@ if __name__ == '__main__':
 
         # Build output while walking the tree
         gen.header()
-        visitor.visit(tree)
+        for srcfile in cl_args.py_file:
+            gen.start_file(srcfile)
+            # Use AST to parse the file.
+            with open(srcfile) as src:
+                tree = ast.parse(src.read())
+            visitor.visit(tree)
+            gen.end_file(srcfile)
+
         gen.footer()
+        # TODO detect and warn about empty results
+        # TODO optionally include global objects in a pseudo-class
+        cl_args.output.close()
 
     except SyntaxError as see:
         print('Syntax error in ', end='')
