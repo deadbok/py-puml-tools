@@ -29,9 +29,9 @@ import sys
 import yaml
 
 # this project imports
+from version import __version__
 from puml_generator import PUML_Generator, PUML_Generator_NS
 
-__VERSION__ = '0.2.3'
 HOME_DIR = os.path.dirname(__file__)
 
 # puml indentation unit
@@ -163,7 +163,7 @@ def cli_parser():
     parser = argparse.ArgumentParser(
         prog='py2uml',
         description='py2puml' +
-        ' from Martin B. K. Grønholdt, v' + __VERSION__ + ' by Michelle Baert.\n' +
+        ' from Martin B. K. Grønholdt, v' + __version__ + ' by Michelle Baert.\n' +
         'Create PlantUML classes from Python source code.',
         epilog='If no config file is provided, settings are loaded \n' +
         'sequentially from all available files in :\n' +

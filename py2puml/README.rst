@@ -23,7 +23,7 @@ Command line interface
     usage: py2uml [-h] [--config CONFIG] [-o [OUTPUT]] [-r ROOT]
                   py_file [py_file ...]
 
-    py2puml from Martin B. K. Grønholdt, v0.2.1 by Michelle Baert.
+    py2puml from Martin B. K. Grønholdt, v0.2.4 by Michelle Baert.
     Create PlantUML classes from Python source code.
 
     positional arguments:
