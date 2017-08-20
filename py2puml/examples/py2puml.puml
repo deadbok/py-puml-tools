@@ -28,25 +28,6 @@ class TreeVisitor {
   +visit_Assign(self, node)
 }
 
-class PUML_Generator {
-  +dest
-  +root
-  +config
-  +curpath
-  +namespaces
-  +sourcename
-  -__init__(self, dest, root='', config=None)
-  +start_file(self, sourcename)
-  +end_file(self, sourcename=None)
-  +pop_ns(self, count=1)
-  +push_ns(self, name)
-  +depth(self)
-  +indent(self, *args)
-  +header(self)
-  +footer(self)
-  +print_classinfo(self, classinfo)
-}
-
 ' customizable epilog
 ' here you may add notes and associations
 

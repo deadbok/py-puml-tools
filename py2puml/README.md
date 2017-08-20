@@ -10,22 +10,25 @@ results as long as the syntax is correct.
   * Supports simple and multiple inheritance
   * Include argument lists
   * configurable prolog and epilog, useful for styling
+  * allow several input sources for one plantuml output.
 
 ## Command line interface
 
-    usage: py2uml [-h] [--root ROOT] [--config CONFIG] py_file [puml_file]
+    usage: py2uml [-h] [--config CONFIG] [-o [OUTPUT]] [-r ROOT]
+                  py_file [py_file ...]
 
-    py2puml from Martin B. K. Grønholdt, v0.2.0 by Michelle Baert.
+    py2puml from Martin B. K. Grønholdt, v0.2.1 by Michelle Baert.
     Create PlantUML classes from Python source code.
 
     positional arguments:
-      py_file          The Python source file to parse.
-      puml_file        The name of the ouput PlantUML file.
+      py_file               the Python source files to parse.
 
     optional arguments:
-      -h, --help       show this help message and exit
-      --root ROOT      Project root directory. Create namespaces from there
-      --config CONFIG  Configuration file (replace defaults)
+      -h, --help            show this help message and exit
+      --config CONFIG       Configuration file (replace defaults)
+      -o [OUTPUT], --output [OUTPUT]
+                            The name of the ouput PlantUML file.
+      -r ROOT, --root ROOT  Project root directory. Create namespaces from there
 
     If no config file is provided, settings are loaded
     sequentially from all available files in :
@@ -43,6 +46,9 @@ Several examples are provided. Here is how you build a diagram from this program
     $ ../py2puml.py --config custom.ini ../py2puml.py py2puml-custom.puml
     $ java -jar /usr/local/share/plantuml/plantuml.jar py2puml-custom.puml
 
+Hand-made `Makefile`s are there to help automatisation.
+
+
 **Rendered output**
 
 ![py2puml.py classes](examples/py2puml-custom.png)
@@ -51,5 +57,9 @@ Of course the diagram can be enriched, with class associations
 for example, by editing the generated .puml file, or maybe with an epilog
 in custom config.
 
+Here is an example with multiple source files, multiple inheritance, and
+[project-specific configuration](examples/cal_clock3/py2puml.ini):
+
+![cal_clock3](examples/cal_clock3/calendar_clock.png):
+
 ## TODO
-  * allow several input sources for one plantuml output.

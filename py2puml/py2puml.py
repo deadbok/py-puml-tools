@@ -26,8 +26,10 @@ import os
 import sys
 
 # other imports
-import astor
 import yaml
+
+# this project imports
+from puml_generator import PUML_Generator, PUML_Generator_NS
 
 __VERSION__ = '0.2.1'
 HOME_DIR = os.path.dirname(__file__)
@@ -151,112 +153,7 @@ class TreeVisitor(ast.NodeVisitor):
                 if isinstance(target, ast.Name):
                     self.classinfo.add_classvar(target.id)
 
-class PUML_Generator:
-    """Formats data for PlantUML.
-    """
-    # TODO Extract a derived class for handling namespaces
-    def __init__(self, dest, root='', config=None):
-        self.dest = dest
-        self.root = root
-        self.config = config
-        # self.tabs = 0
-        self.curpath = ''
-        self.namespaces = []
-        self.sourcename = None
 
-    def start_file(self, sourcename):
-        "Sets up the output context for a single python source file"
-        self.sourcename = sourcename
-        # make namespace hierarchy from root if supplied
-        if self.root:
-            names = os.path.splitext(os.path.relpath(sourcename, self.root))[0]
-            namespaces = names.split(os.path.sep)
-
-            # determine the common path
-            n = 0
-            for d in self.namespaces:
-                if n >= len(namespaces):
-                    break
-                if d != namespaces[n]:
-                    break
-                n += 1
-            self.pop_ns(len(self.namespaces) - n)
-
-            for d in namespaces[n:]:
-                self.push_ns(d)
-
-    def end_file(self, sourcename=None):
-        "Cleans up the output context for a single python source file"
-        logger.info('finished with %s', sourcename)
-        self.sourcename = None
-
-    def pop_ns(self, count=1):
-        "Removes some inner namespaces"
-        for n in range(count): # pylint: disable=unused-variable
-            self.namespaces.pop()
-            self.indent('}')
-
-    def push_ns(self, name):
-        "Adds an inner namespace to the context"
-        self.indent('namespace ' + name + ' {')
-        self.namespaces.append(name)
-
-    @property
-    def depth(self):
-        "Levels of current namespace nesting"
-        return len(self.namespaces)
-
-    def indent(self, *args):
-        "Formats given arguments to destination with proper indentation."
-        if self.namespaces:
-            print(TAB * self.depth, end="", file=self.dest)
-        print(*args, file=self.dest)
-
-    def header(self):
-        "Outputs file header: settings and namespaces."
-        self.indent("@startuml")
-        if self.config:
-            prolog = self.config.get('puml', 'prolog', fallback=None)
-            if prolog:
-                self.indent(prolog + "\n")
-
-    def footer(self):
-        "Outputs file footer: close namespaces and marker."
-        # Close the namespaces
-        while self.namespaces:
-            self.pop_ns(self.depth)
-
-        # append the epilog if provided
-        if self.config:
-            epilog = self.config.get('puml', 'epilog', fallback=None)
-            if epilog:
-                self.indent(epilog + "\n")
-
-        # End the PlantUML files.
-        self.indent('@enduml')
-
-
-    def print_classinfo(self, classinfo):
-        """Prints class definition as plantuml script."""
-        for base in classinfo.bases:
-            expr = astor.to_source(base).rstrip()
-            # ignore base if 'object'
-            if expr != 'object':
-                self.indent(expr, "<|--", classinfo.classname)
-        # class and instance members
-        self.indent("class", classinfo.classname, "{")
-        for m in classinfo.classvars:
-            self.indent(TAB + "{static}", classinfo.visibility(m) + m)
-        for m in classinfo.members:
-            self.indent(TAB + classinfo.visibility(m) + m)
-        for m in classinfo.methods:
-            logger.info("Method: %r \n%s", m, ast.dump(m))
-            arglist = astor.to_source(m.args).rstrip()
-            self.indent(TAB + "{0}{1}({2})".format(
-                classinfo.visibility(m.name),
-                m.name, arglist))
-        self.indent("}\n")
-        # TODO allow to disable or simplify arg lists output (config)
 
 def cli_parser():
     "Builds a command line parser suitable for this tool."
@@ -288,42 +185,52 @@ def cli_parser():
                         help='the Python source files to parse.')
     return parser
 
-if __name__ == '__main__':
-    cfg = configparser.ConfigParser()
-    cl_args = cli_parser().parse_args()
-    try:
-        # provided config file completely replaces global settings
-        if cl_args.config:
-            cfg.read(cl_args.config)
-        else:
-            cfg.read(CONFIG_FILENAMES)
+def run(cl_args):
+    """Main application runner.
 
-        # setup .puml generator
+    @param cl_args: argparser namespace.
+    """
+    cfg = configparser.ConfigParser()
+    # provided config file completely replaces global settings
+    if cl_args.config:
+        cfg.read(cl_args.config)
+    else:
+        cfg.read(CONFIG_FILENAMES)
+
+    # setup .puml generator
+    if cl_args.root:
+        gen = PUML_Generator_NS(dest=cl_args.output,
+                                root=cl_args.root,
+                                config=cfg)
+    else:
         gen = PUML_Generator(dest=cl_args.output,
-                             root=cl_args.root,
                              config=cfg)
 
-        # The tree visitor will use it
-        visitor = TreeVisitor(gen)
+    # The tree visitor will use it
+    visitor = TreeVisitor(gen)
 
-        # Build output while walking the tree
-        gen.header()
-        for srcfile in cl_args.py_file:
-            gen.start_file(srcfile)
-            # Use AST to parse the file.
-            with open(srcfile) as src:
+    gen.header()
+    for srcfile in cl_args.py_file:
+        # Use AST to parse the file.
+        with open(srcfile) as src:
+            try:
                 tree = ast.parse(src.read())
-            visitor.visit(tree)
-            gen.end_file(srcfile)
+            except SyntaxError as see:
+                sys.stderr.write('Syntax error in {0}:{1}:{2}: {3}'.format(
+                    srcfile, see.lineno, see.offset, see.text))
+                sys.stderr.write("Aborting conversion of " + srcfile)
+                # skip to next srcfile
+                continue
+        # Build output while walking the tree
+        gen.start_file(srcfile)
+        visitor.visit(tree)
+        gen.end_file(srcfile)
 
-        gen.footer()
-        # TODO detect and warn about empty results
-        # TODO optionally include global objects in a pseudo-class
+    gen.footer()
+    # TODO detect and warn about empty results
+    # TODO optionally include global objects in a pseudo-class
+    if cl_args.output != sys.stdout:
         cl_args.output.close()
 
-    except SyntaxError as see:
-        print('Syntax error in ', end='')
-        print(cl_args.py_file.name + ':' + str(see.lineno) + ':' + str(
-            see.offset) + ': ' + see.text)
-    # except BaseException as err:
-    #     print(err)
+if __name__ == '__main__':
+    run(cli_parser().parse_args())

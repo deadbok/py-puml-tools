@@ -5,7 +5,7 @@ import io
 import pytest
 # pylint: disable= invalid-name, redefined-outer-name, missing-docstring, no-self-use, too-few-public-methods
 
-from py2puml import ClassInfo, TreeVisitor, PUML_Generator
+from py2puml import ClassInfo, TreeVisitor, PUML_Generator, PUML_Generator_NS, run, cli_parser
 
 cfg = configparser.ConfigParser()
 cfg.read('py2puml.ini')
@@ -42,42 +42,34 @@ class Test_ClassInfo(object):
         cdef.add_member('member')
         assert cdef.members == ['member']
 
-# pylint  disable=redefined-outer-name #                 W0621
-@pytest.fixture
-def gen_no_ns():
-    dest = io.StringIO()
-    return PUML_Generator(dest, config=cfg)
+class Test_PUML_Generator(object):
+    pyfilename = 'some/sub/path/module.py'
 
-@pytest.fixture
-def gen_with_ns():
-    dest = io.StringIO()
-    return PUML_Generator(dest, root='.', config=cfg)
+    @staticmethod
+    @pytest.fixture
+    def gen():
+        dest = io.StringIO()
+        return PUML_Generator(dest, config=cfg)
 
-class Test_PUML_Generator_noNS(object):
-    def test_init(self, gen_no_ns):
-        assert gen_no_ns.namespaces == []
-        assert gen_no_ns.depth == 0
+    def test_init(self, gen):
+        assert gen.dest.write
 
-    def test_header(self, gen_no_ns):
-        assert gen_no_ns.depth == 0
-        gen_no_ns.header()
-        gen_no_ns.start_file('some/sub/path/module.py')
-        assert gen_no_ns.depth == 0
-        # assert gen_no_ns.dest.tell() == 80
-        assert gen_no_ns.dest.getvalue() == """\
+    def test_header(self, gen):
+        gen.header()
+        assert gen.dest.tell() == 80
+        assert gen.dest.getvalue() == """\
 @startuml
 skinparam monochrome true
 skinparam classAttributeIconSize 0
 scale 2
 
 """
-
-    def test_footer(self, gen_no_ns):
-        gen_no_ns.header()
-        gen_no_ns.start_file('some/sub/path/module.py')
-        p = gen_no_ns.dest.tell()
-        gen_no_ns.footer()
-        assert gen_no_ns.dest.getvalue()[p:] == """\
+    def test_footer(self, gen):
+        gen.header()
+        gen.start_file(self.pyfilename)
+        p = gen.dest.tell()
+        gen.footer()
+        assert gen.dest.getvalue()[p:] == """\
 ' customizable epilog
 ' here you may add notes and associations
 
@@ -85,27 +77,35 @@ scale 2
 """
 
 class Test_PUML_Generator_NS(object):
-    def test_init(self, gen_with_ns):
-        assert gen_with_ns.namespaces == []
-        assert gen_with_ns.depth == 0
+    pyfilename = 'some/sub/path/module.py'
 
-    def test_start_file(self, gen_with_ns):
-        gen_with_ns.start_file('some/sub/path/module.py')
-        assert gen_with_ns.namespaces == ['some', 'sub', 'path', 'module']
-        assert gen_with_ns.depth == 4
-        gen_with_ns.start_file('some/sub/other_module.py')
-        assert gen_with_ns.namespaces == ['some', 'sub', 'other_module']
-        assert gen_with_ns.depth == 3
+    @staticmethod
+    @pytest.fixture
+    def gen():
+        dest = io.StringIO()
+        return PUML_Generator_NS(dest, root='.', config=cfg)
 
-    def test_header(self, gen_with_ns):
+    def test_init(self, gen):
+        assert gen.namespaces == []
+        assert gen.depth == 0
+
+    def test_start_file(self, gen):
+        gen.start_file(self.pyfilename)
+        assert gen.namespaces == ['some', 'sub', 'path', 'module']
+        assert gen.depth == 4
+        gen.start_file('some/sub/other_module.py')
+        assert gen.namespaces == ['some', 'sub', 'other_module']
+        assert gen.depth == 3
+
+    def test_header(self, gen):
         # initially no indentation
-        assert gen_with_ns.depth == 0
-        gen_with_ns.header()
-        gen_with_ns.start_file('some/sub/path/module.py')
+        assert gen.depth == 0
+        gen.header()
+        gen.start_file(self.pyfilename)
         # generating header increases indentation
-        assert gen_with_ns.depth == 4
-        assert gen_with_ns.dest.tell() == 161
-        assert gen_with_ns.dest.getvalue() == """\
+        assert gen.depth == 4
+        assert gen.dest.tell() == 161
+        assert gen.dest.getvalue() == """\
 @startuml
 skinparam monochrome true
 skinparam classAttributeIconSize 0
@@ -117,12 +117,12 @@ namespace some {
       namespace module {
 """
 
-    def test_footer(self, gen_with_ns):
-        gen_with_ns.header()
-        gen_with_ns.start_file('some/sub/path/module.py')
-        p = gen_with_ns.dest.tell()
-        gen_with_ns.footer()
-        assert gen_with_ns.dest.getvalue()[p:] == """\
+    def test_footer(self, gen):
+        gen.header()
+        gen.start_file(self.pyfilename)
+        p = gen.dest.tell()
+        gen.footer()
+        assert gen.dest.getvalue()[p:] == """\
       }
     }
   }
@@ -133,7 +133,6 @@ namespace some {
 @enduml
 """
     #TODO test static methods and class variables
-    #TODO test multiple input files
 
 class Test_TreeVisitor(object):
     def test_init(self):
@@ -141,7 +140,7 @@ class Test_TreeVisitor(object):
         assert visitor
 
     def py2puml(self, sourcefile):
-        gen = PUML_Generator(dest=io.StringIO(), root='', config=cfg)
+        gen = PUML_Generator(dest=io.StringIO(), config=cfg)
         with open(sourcefile) as f:
             tree = ast.parse(f.read())
         visitor = TreeVisitor(gen)
@@ -163,3 +162,24 @@ class Test_TreeVisitor(object):
         with open('examples/py2puml.puml') as f:
             expected = f.read()
         assert puml == expected
+
+#TODO test multiple input files
+def test_run_multiple_sources(capsys):
+    args = cli_parser().parse_args(
+        '--root . py2puml.py puml_generator.py'.split())
+    assert args.root == '.'
+    assert args.py_file == ['py2puml.py', 'puml_generator.py']
+    assert args.root == '.'
+    run(args)
+    out, err = capsys.readouterr()
+
+    assert err == ''
+    assert out.count('namespace ') == 2
+    assert out.count('class ') == 4
+
+    with open('examples/py2puml_NS.puml') as f:
+        expected = f.read()
+    assert out == expected
+
+
+# TODO test error cases
