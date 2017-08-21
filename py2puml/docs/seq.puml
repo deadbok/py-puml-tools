@@ -1,0 +1,40 @@
+' -*- plantuml -*-
+@startuml
+actor run
+''actor cli_parser
+boundary ast
+participant visitor <<TreeVisitor>>
+participant classinfo <<ClassInfo>>
+participant gen <<PUML_Generator>>
+
+== setup ==
+run -> run : load config
+run -> gen : new(config)
+activate gen
+run -> visitor : new(gen)
+activate visitor
+run -> gen : header()
+
+== for each srcfile ==
+run -> ast : parse(src)
+run <- ast : tree
+run -> gen : start_file(srcfile)
+run -> visitor : visit(tree)
+loop for each ClassDef
+''create classinfo
+visitor -> classinfo : new
+activate classinfo
+visitor -/o classinfo : add_member(name)
+visitor -/o classinfo : add_method(node)
+visitor -> classinfo : done(gen)
+classinfo -> gen : print_classinfo(self)
+deactivate classinfo
+end
+run -> gen : end_file()
+
+== tear down ==
+run -/ visitor
+deactivate visitor
+run -> gen : footer()
+deactivate gen
+@enduml
