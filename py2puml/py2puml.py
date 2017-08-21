@@ -31,6 +31,7 @@ import yaml
 # this project imports
 from version import __version__
 from puml_generator import PUML_Generator, PUML_Generator_NS
+from code_info import CodeInfo, ClassInfo
 
 HOME_DIR = os.path.dirname(__file__)
 
@@ -52,46 +53,6 @@ with open(LOGGING_CFG) as f:
     logging.config.dictConfig(yaml.load(f))
 logger = logging.getLogger(__name__)
 
-class ClassInfo:
-    """
-    The parsed class definition.
-
-    Elements are grouped by type in arrays while parsing, printing done last.
-    """
-    def __init__(self, node):
-        self.classname = node.name
-        self.bases = node.bases
-        self.classvars = []
-        self.members = []
-        self.methods = []
-
-    @staticmethod
-    def visibility(name):
-        """Detects the visibility of given member name, as plantuml convention symbol.
-
-       @returns '-' for private, '+' for public
-        """
-        if name.startswith('_'):
-            return '-'
-        return '+'
-
-    def add_classvar(self, name):
-        "Registers a class variable"
-        self.classvars.append(name)
-
-    def add_member(self, name):
-        "Registers an instance variable if new"
-        if name not in self.members:
-            self.members.append(name)
-
-    def add_method(self, node):
-        "Registers a method"
-        self.methods.append(node)
-
-    def done(self, context):
-        "Signals end of class parsing."
-        context.print_classinfo(self)
-
 class TreeVisitor(ast.NodeVisitor):
     """`ast.NodeVisitor` is the primary tool for ‘scanning’ the tree.
     To use it, subclass it and override methods visit_Foo, corresponding to the
@@ -101,6 +62,7 @@ class TreeVisitor(ast.NodeVisitor):
     def __init__(self, context=None):
         self.context = context
         self.classinfo = None
+        self.globals = CodeInfo()
         self.constructor = False
 
     def visit_ClassDef(self, node):
@@ -134,9 +96,13 @@ class TreeVisitor(ast.NodeVisitor):
                     self.visit(code)
                 self.constructor = False
             self.classinfo.add_method(node)
+        else:
+            self.globals.add_function(node)
 
     def visit_Assign(self, node):
         "Overrides AST assignment statement visitor"
+        # FIXME assignments to imported names may incorrectly report variable declaration
+        # pylint: disable=unnecessary-lambda
         if self.constructor:
             # Find attributes since we want "self." + "something"
             for target in node.targets:
@@ -145,14 +111,18 @@ class TreeVisitor(ast.NodeVisitor):
                     if isinstance(target.value, ast.Name):
                         if target.value.id == 'self':
                             self.classinfo.add_member(target.attr)
-
-        elif self.classinfo:
-            # Look for class variables (shared by all instances)
+        else:
+            if self.classinfo:
+                # Store as class variable (shared by all instances)
+                fn = lambda x: self.classinfo.add_classvar(x)
+            else:
+                # Store as global variable
+                fn = lambda x: self.globals.add_variable(x)
+                # pylint disable=unnecessary-lambda
             for target in node.targets:
-                # Get the target member name.
+                # keep only simple names
                 if isinstance(target, ast.Name):
-                    self.classinfo.add_classvar(target.id)
-
+                    fn(target.id)
 
 
 def cli_parser():

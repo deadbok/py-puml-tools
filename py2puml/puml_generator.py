@@ -88,6 +88,12 @@ class PUML_Generator:
                 m.name, arglist))
         self.output("}\n")
 
+    def print_codeinfo(self, codeinfo):
+        """Prints module globals as plantuml script."""
+        if self.config.get('module', 'write-globals', fallback=None):
+            logger.warning("module.write-globals is not implemented")
+        # TODO implement print_codeinfo
+
 class PUML_Generator_NS(PUML_Generator):
     """Formats data for PlantUML.
     """

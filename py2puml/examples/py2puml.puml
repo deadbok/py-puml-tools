@@ -3,24 +3,11 @@ skinparam monochrome true
 skinparam classAttributeIconSize 0
 scale 2
 
-class ClassInfo {
-  +classname
-  +bases
-  +classvars
-  +members
-  +methods
-  -__init__(self, node)
-  +visibility(name)
-  +add_classvar(self, name)
-  +add_member(self, name)
-  +add_method(self, node)
-  +done(self, context)
-}
-
 ast.NodeVisitor <|-- TreeVisitor
 class TreeVisitor {
   +context
   +classinfo
+  +globals
   +constructor
   -__init__(self, context=None)
   +visit_ClassDef(self, node)

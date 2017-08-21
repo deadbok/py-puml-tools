@@ -211,16 +211,16 @@ class Test_TreeVisitor(object):
 
 def test_run_multiple_sources(capsys):
     args = cli_parser().parse_args(
-        '--root . py2puml.py puml_generator.py'.split())
+        '--root . py2puml.py puml_generator.py code_info.py'.split())
     assert args.root == '.'
-    assert args.py_file == ['py2puml.py', 'puml_generator.py']
+    assert args.py_file == ['py2puml.py', 'puml_generator.py', 'code_info.py']
     assert args.root == '.'
     run(args)
     out, err = capsys.readouterr()
 
     assert err == ''
-    assert out.count('namespace ') == 2
-    assert out.count('class ') == 4
+    assert out.count('namespace ') == 3
+    assert out.count('class ') == 5
 
     with open('examples/py2puml_NS.puml') as f:
         expected = f.read()

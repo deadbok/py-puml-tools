@@ -5,24 +5,11 @@ skinparam classAttributeIconSize 0
 scale 1.2
 
 namespace py2puml {
-  class ClassInfo {
-    +classname
-    +bases
-    +classvars
-    +members
-    +methods
-    -__init__(self, node)
-    +visibility(name)
-    +add_classvar(self, name)
-    +add_member(self, name)
-    +add_method(self, node)
-    +done(self, context)
-  }
-
   ast.NodeVisitor <|-- TreeVisitor
   class TreeVisitor {
     +context
     +classinfo
+    +globals
     +constructor
     -__init__(self, context=None)
     +visit_ClassDef(self, node)
@@ -56,6 +43,31 @@ namespace puml_generator {
     +push_ns(self, name)
     +output(self, *args)
     +footer(self)
+  }
+
+}
+namespace code_info {
+  class CodeInfo {
+    +variables
+    +functions
+    -__init__(self)
+    +add_variable(self, name)
+    +add_function(self, node)
+    +visibility(name)
+  }
+
+  CodeInfo <|-- ClassInfo
+  class ClassInfo {
+    +classname
+    +bases
+    +members
+    -__init__(self, node)
+    +classvars(self)
+    +methods(self)
+    +add_classvar(self, name)
+    +add_member(self, name)
+    +add_method(self, node)
+    +done(self, context)
   }
 
 }
