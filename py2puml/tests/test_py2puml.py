@@ -69,12 +69,7 @@ scale 2
         gen.start_file(self.pyfilename)
         p = gen.dest.tell()
         gen.footer()
-        assert gen.dest.getvalue()[p:] == """\
-' customizable epilog
-' here you may add notes and associations
-
-@enduml
-"""
+        assert gen.dest.getvalue()[p:] == """@enduml\n"""
 
 class Test_PUML_Generator_NS(object):
     pyfilename = 'some/sub/path/module.py'
@@ -127,12 +122,63 @@ namespace some {
     }
   }
 }
-' customizable epilog
-' here you may add notes and associations
-
 @enduml
 """
-    #TODO test static methods and class variables
+    def test_folder_tree(self, gen):
+        sources = ['setup.py',
+                   'sample/module1.py',
+                   'dirA1/dirB1/module2.py',
+                   'dirA1/module3.py',
+                   'dirA2/dir_and_module/module4.py',
+                   'dirA2/dir_and_module.py',
+                   'dirA3/some/other/module4.py']
+        for src in sources:
+            ns = src[:-3].split('/')
+            gen.start_file(src)
+            assert gen.depth == len(ns)
+            assert gen.namespaces == ns
+            gen.output("# contents of", src)
+            gen.end_file()
+        gen.footer() # close all namespaces
+        assert gen.dest.getvalue() == """\
+namespace setup {
+  # contents of setup.py
+}
+namespace sample {
+  namespace module1 {
+    # contents of sample/module1.py
+  }
+}
+namespace dirA1 {
+  namespace dirB1 {
+    namespace module2 {
+      # contents of dirA1/dirB1/module2.py
+    }
+  }
+  namespace module3 {
+    # contents of dirA1/module3.py
+  }
+}
+namespace dirA2 {
+  namespace dir_and_module {
+    namespace module4 {
+      # contents of dirA2/dir_and_module/module4.py
+    }
+    # contents of dirA2/dir_and_module.py
+  }
+}
+namespace dirA3 {
+  namespace some {
+    namespace other {
+      namespace module4 {
+        # contents of dirA3/some/other/module4.py
+      }
+    }
+  }
+}
+@enduml
+"""
+    #TODO test static methods
 
 class Test_TreeVisitor(object):
     def test_init(self):
@@ -163,7 +209,6 @@ class Test_TreeVisitor(object):
             expected = f.read()
         assert puml == expected
 
-#TODO test multiple input files
 def test_run_multiple_sources(capsys):
     args = cli_parser().parse_args(
         '--root . py2puml.py puml_generator.py'.split())
@@ -181,5 +226,72 @@ def test_run_multiple_sources(capsys):
         expected = f.read()
     assert out == expected
 
+def test_run_dbpuml2sql(capsys):
+    args = cli_parser().parse_args(['-c', 'examples/dbpuml2sql.ini',
+                                    #'-r', '..',
+                                    '../dbpuml2sql/dbpuml2sql.py',
+                                    '../dbpuml2sql/__init__.py',
+                                    '../dbpuml2sql/pumlreader.py',
+                                    '../dbpuml2sql/table.py',
+                                    '../dbpuml2sql/test_Table.py'])
+    run(args)
+    out, err = capsys.readouterr()
 
-# TODO test error cases
+    assert err == ''
+    assert out.count('namespace ') == 0 # 6
+    assert out.count('{static}') == 1
+    assert out.count('class ') == 3
+    assert out.count('PUMLReader o-- Table') == 1
+
+    with open('examples/dbpuml2sql.puml') as f:
+        expected = f.read()
+    assert out == expected
+
+def test_run_dbspq2puml(capsys):
+    args = cli_parser().parse_args(['-c', 'examples/dbsql2puml.ini',
+                                    #'-r', '..',
+                                    '../dbsql2puml/dbsql2puml.py',
+                                    '../dbsql2puml/sql2puml.py',
+                                    '../dbsql2puml/sqlparsetables.py'])
+    # missing config file silently ignores any config. Call it a feature
+    # FIXME include package name for base classes imported directly
+    # FIXME relations between namespaces
+    run(args)
+    out, err = capsys.readouterr()
+
+    assert err == ''
+    # assert out.count('namespace ') == 0 # 6
+    # assert out.count('{static}') == 1
+    # assert out.count('class ') == 3
+    # assert out.count('PUMLReader o-- Table') == 1
+
+    with open('examples/dbsql2puml.puml') as f:
+        expected = f.read()
+    assert out == expected
+
+def test_run_syntax_error(capsys):
+    args = cli_parser().parse_args('examples/bugged.py examples/person.py'.split())
+    run(args)
+    out, err = capsys.readouterr()
+
+    with open('examples/person.puml') as f:
+        expected = f.read()
+    assert out == expected
+
+    assert err == """\
+Syntax error in examples/bugged.py:6:57: while i<10 #Begin loop, repeat until there's ten numbers
+Aborting conversion of examples/bugged.py
+"""
+
+def test_run_filenotfound_error(capsys):
+    args = cli_parser().parse_args('missing.py examples/person.py'.split())
+    run(args)
+    out, err = capsys.readouterr()
+
+    with open('examples/person.puml') as f:
+        expected = f.read()
+    assert out == expected
+
+    assert err == """\
+[Errno 2] No such file or directory: 'missing.py', skipping
+"""

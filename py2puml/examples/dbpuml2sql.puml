@@ -1,0 +1,32 @@
+@startuml
+skinparam monochrome true
+skinparam classAttributeIconSize 0
+scale 2
+
+class PUMLReader {
+  {static} +keywords
+  +tables
+  -__init__(self)
+  +parse(self, lines)
+  +sql(self)
+}
+
+class Table {
+  +name
+  +fields
+  -__init__(self)
+  +parse(self, lines)
+  +sql(self)
+}
+
+TestCase <|-- TestTable
+Table <|-- TestTable
+class TestTable {
+  +setUp(self)
+  +test_parse(self)
+  +test_sql(self)
+}
+
+PUMLReader o-- Table
+
+@enduml

@@ -173,10 +173,10 @@ def cli_parser():
         '      - <WORK_DIR>/.py2puml.ini\n' +
         '      - <WORK_DIR>/py2puml.ini\n',
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--config',
+    parser.add_argument('-c', '--config',
                         help='Configuration file (replace defaults)')
     parser.add_argument('-o', '--output', type=argparse.FileType('w'),
-                        nargs='?', default=sys.stdout,
+                        default=sys.stdout,
                         help='The name of the ouput PlantUML file.')
     parser.add_argument('-r', '--root', #default='',
                         help='Project root directory.'
@@ -212,15 +212,18 @@ def run(cl_args):
     gen.header()
     for srcfile in cl_args.py_file:
         # Use AST to parse the file.
-        with open(srcfile) as src:
-            try:
+        try:
+            with open(srcfile) as src:
                 tree = ast.parse(src.read())
-            except SyntaxError as see:
-                sys.stderr.write('Syntax error in {0}:{1}:{2}: {3}'.format(
-                    srcfile, see.lineno, see.offset, see.text))
-                sys.stderr.write("Aborting conversion of " + srcfile)
-                # skip to next srcfile
-                continue
+        except FileNotFoundError as err:
+            sys.stderr.write(str(err) + ", skipping\n")
+            continue
+        except SyntaxError as see:
+            sys.stderr.write('Syntax error in {0}:{1}:{2}: {3}'.format(
+                srcfile, see.lineno, see.offset, see.text))
+            sys.stderr.write("Aborting conversion of " + srcfile + "\n")
+            # skip to next srcfile
+            continue
         # Build output while walking the tree
         gen.start_file(srcfile)
         visitor.visit(tree)
@@ -229,8 +232,8 @@ def run(cl_args):
     gen.footer()
     # TODO detect and warn about empty results
     # TODO optionally include global objects in a pseudo-class
-    if cl_args.output != sys.stdout:
+    if cl_args.output != sys.stdout: # pragma: no cover
         cl_args.output.close()
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     run(cli_parser().parse_args())

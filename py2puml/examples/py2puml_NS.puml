@@ -58,7 +58,4 @@ namespace puml_generator {
   }
 
 }
-' customizable epilog
-' here you may add notes and associations
-
 @enduml
