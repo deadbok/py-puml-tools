@@ -5,44 +5,35 @@ skinparam classAttributeIconSize 0
 scale 1.2
 
 namespace py2puml {
-  ast.NodeVisitor <|-- TreeVisitor
-  class TreeVisitor {
-    +context
-    +classinfo
-    +globals
-    +constructor
-    -__init__(self, context=None)
-    +visit_ClassDef(self, node)
-    +visit_FunctionDef(self, node)
-    +visit_Assign(self, node)
-  }
-
 }
 namespace puml_generator {
   class PUML_Generator {
     +dest
     +config
     +sourcename
-    -__init__(self, dest, config=None)
-    +start_file(self, sourcename)
-    +end_file(self, sourcename=None)
-    +output(self, *args)
-    +header(self)
-    +footer(self)
-    +print_classinfo(self, classinfo)
+    -__init__()
+    +start_file()
+    +end_file()
+    +output()
+    +header()
+    +footer()
+    +do_file()
+    +print_classinfo()
+    +print_codeinfo()
+    +arglist()
   }
 
   PUML_Generator <|-- PUML_Generator_NS
   class PUML_Generator_NS {
     +root
     +namespaces
-    -__init__(self, dest, root, config=None)
-    +depth(self)
-    +start_file(self, sourcename)
-    +pop_ns(self, count=1)
-    +push_ns(self, name)
-    +output(self, *args)
-    +footer(self)
+    -__init__()
+    +depth()
+    +start_file()
+    +pop_ns()
+    +push_ns()
+    +output()
+    +footer()
   }
 
 }
@@ -50,10 +41,10 @@ namespace code_info {
   class CodeInfo {
     +variables
     +functions
-    -__init__(self)
-    +add_variable(self, name)
-    +add_function(self, node)
-    +visibility(name)
+    -__init__()
+    +add_variable()
+    +add_function()
+    +visibility()
   }
 
   CodeInfo <|-- ClassInfo
@@ -61,13 +52,31 @@ namespace code_info {
     +classname
     +bases
     +members
-    -__init__(self, node)
-    +classvars(self)
-    +methods(self)
-    +add_classvar(self, name)
-    +add_member(self, name)
-    +add_method(self, node)
-    +done(self, context)
+    -__init__()
+    +classvars()
+    +methods()
+    +add_classvar()
+    +add_member()
+    +add_method()
+    +done()
+  }
+
+}
+namespace ast_visitor {
+  ast.NodeVisitor <|-- TreeVisitor
+  class TreeVisitor {
+    +srcfile
+    +context
+    +classinfo
+    +globals
+    +constructor
+    +tree
+    -__init__()
+    +parse()
+    +visit_tree()
+    +visit_ClassDef()
+    +visit_FunctionDef()
+    +visit_Assign()
   }
 
 }

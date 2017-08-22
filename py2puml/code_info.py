@@ -1,27 +1,12 @@
 """
+Classes for managing infos and ast nodes about parsed python code.
 
-TODO : how to use ast Attributes
-https://greentreesnakes.readthedocs.io/en/latest/nodes.html#Attribute
-
->>> node = ast.parse('os.path.sep').body[0]
->>> ast.dump(node)
-"Expr(value=Attribute(value=Attribute(value=Name(id='os', ctx=Load()), attr='path', ctx=Load()), attr='sep', ctx=Load()))"
->>> l =['node.value.value.value.id', 'node.value.value.attr', 'node.value.attr']
->>> [eval(e) for e in l]
-['os', 'path', 'sep']
->>> astor.to_source(node)
-'os.path.sep\n'
-
-So
-  - node is an Expr
-  - node.value is an Attribute
-  - Attribute nodes have a .value (node) and an .attr
-  - the .value can be a Name or an Attribute
+Infos are fed by some ast.NodeVisitor and used by some PUML_Generator.
 """
 import logging
 import ast
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger() # (__name__)
 
 class CodeInfo:
     """
@@ -38,6 +23,8 @@ class CodeInfo:
 
     def add_function(self, node):
         "Registers a function"
+        # don't store unneeded body
+        node.body = ast.Pass()
         self.functions.append(node)
 
     @staticmethod
@@ -85,6 +72,7 @@ class ClassInfo(CodeInfo):
 
     def add_method(self, node):
         "Registers a method"
+        node.body = None
         self.add_function(node)
 
     def done(self, context):

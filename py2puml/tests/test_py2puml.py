@@ -5,7 +5,11 @@ import io
 import pytest
 # pylint: disable= invalid-name, redefined-outer-name, missing-docstring, no-self-use, too-few-public-methods
 
-from py2puml import ClassInfo, TreeVisitor, PUML_Generator, PUML_Generator_NS, run, cli_parser
+# TODO one test file per module
+from code_info import ClassInfo, CodeInfo
+from ast_visitor import TreeVisitor
+from puml_generator import PUML_Generator, PUML_Generator_NS
+from py2puml import run, cli_parser
 
 cfg = configparser.ConfigParser()
 cfg.read('py2puml.ini')
@@ -187,15 +191,17 @@ class Test_TreeVisitor(object):
 
     def py2puml(self, sourcefile):
         gen = PUML_Generator(dest=io.StringIO(), config=cfg)
-        with open(sourcefile) as f:
-            tree = ast.parse(f.read())
-        visitor = TreeVisitor(gen)
         gen.header()
-        gen.start_file(sourcefile)
-        visitor.visit(tree)
-        gen.end_file(sourcefile)
+        gen.do_file(sourcefile)
         gen.footer()
         return gen.dest.getvalue()
+
+    def test_default_config(self):
+        assert not cfg.getboolean('methods', 'omit-arg-list', fallback=False)
+        assert not cfg.getboolean('methods', 'omit-self', fallback=False)
+        assert not cfg.getboolean('methods', 'omit-defaults', fallback=False)
+        with pytest.raises(configparser.NoOptionError, message="Expecting NoOptionError"):
+            assert not cfg.getboolean('methods', 'unknown')
 
     def test_visit(self):
         puml = self.py2puml('examples/person.py')
@@ -211,15 +217,15 @@ class Test_TreeVisitor(object):
 
 def test_run_multiple_sources(capsys):
     args = cli_parser().parse_args(
-        '--root . py2puml.py puml_generator.py code_info.py'.split())
+        '--root . py2puml.py puml_generator.py code_info.py ast_visitor.py'.split())
     assert args.root == '.'
-    assert args.py_file == ['py2puml.py', 'puml_generator.py', 'code_info.py']
+    assert args.py_file == ['py2puml.py', 'puml_generator.py', 'code_info.py', 'ast_visitor.py']
     assert args.root == '.'
     run(args)
     out, err = capsys.readouterr()
 
     assert err == ''
-    assert out.count('namespace ') == 3
+    assert out.count('namespace ') == 4
     assert out.count('class ') == 5
 
     with open('examples/py2puml_NS.puml') as f:
@@ -268,6 +274,7 @@ def test_run_dbspq2puml(capsys):
     with open('examples/dbsql2puml.puml') as f:
         expected = f.read()
     assert out == expected
+    # FIXME arglists missing
 
 def test_run_syntax_error(capsys):
     args = cli_parser().parse_args('examples/bugged.py examples/person.py'.split())
@@ -280,7 +287,7 @@ def test_run_syntax_error(capsys):
 
     assert err == """\
 Syntax error in examples/bugged.py:6:57: while i<10 #Begin loop, repeat until there's ten numbers
-Aborting conversion of examples/bugged.py
+Skipping file
 """
 
 def test_run_filenotfound_error(capsys):
@@ -294,4 +301,5 @@ def test_run_filenotfound_error(capsys):
 
     assert err == """\
 [Errno 2] No such file or directory: 'missing.py', skipping
+Skipping file
 """

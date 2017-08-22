@@ -4,18 +4,6 @@ skinparam classAttributeIconSize 0
 scale 2
 
 namespace py2puml {
-  ast.NodeVisitor <|-- TreeVisitor
-  class TreeVisitor {
-    +context
-    +classinfo
-    +globals
-    +constructor
-    -__init__(self, context=None)
-    +visit_ClassDef(self, node)
-    +visit_FunctionDef(self, node)
-    +visit_Assign(self, node)
-  }
-
 }
 namespace puml_generator {
   class PUML_Generator {
@@ -28,7 +16,10 @@ namespace puml_generator {
     +output(self, *args)
     +header(self)
     +footer(self)
+    +do_file(self, srcfile, errormsg=None)
     +print_classinfo(self, classinfo)
+    +print_codeinfo(self, codeinfo)
+    +arglist(self, fdef, ismethod=False)
   }
 
   PUML_Generator <|-- PUML_Generator_NS
@@ -67,6 +58,24 @@ namespace code_info {
     +add_member(self, name)
     +add_method(self, node)
     +done(self, context)
+  }
+
+}
+namespace ast_visitor {
+  ast.NodeVisitor <|-- TreeVisitor
+  class TreeVisitor {
+    +srcfile
+    +context
+    +classinfo
+    +globals
+    +constructor
+    +tree
+    -__init__(self, srcfile, context=None)
+    +parse(self, errormsg=None)
+    +visit_tree(self)
+    +visit_ClassDef(self, node)
+    +visit_FunctionDef(self, node)
+    +visit_Assign(self, node)
   }
 
 }

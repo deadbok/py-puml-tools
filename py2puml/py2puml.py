@@ -18,7 +18,6 @@ Missing:
 # pylint: disable=C0103
 
 # standard lib imports
-import ast
 import configparser
 import logging
 import logging.config
@@ -31,7 +30,6 @@ import yaml
 # this project imports
 from version import __version__
 from puml_generator import PUML_Generator, PUML_Generator_NS
-from code_info import CodeInfo, ClassInfo
 
 HOME_DIR = os.path.dirname(__file__)
 
@@ -51,79 +49,7 @@ LOGGING_CFG = os.path.join(HOME_DIR, 'logging.yaml')
 
 with open(LOGGING_CFG) as f:
     logging.config.dictConfig(yaml.load(f))
-logger = logging.getLogger(__name__)
-
-class TreeVisitor(ast.NodeVisitor):
-    """`ast.NodeVisitor` is the primary tool for ‘scanning’ the tree.
-    To use it, subclass it and override methods visit_Foo, corresponding to the
-    node classes (see Meet the Nodes).
-    """
-    # List to put the class data.
-    def __init__(self, context=None):
-        self.context = context
-        self.classinfo = None
-        self.globals = CodeInfo()
-        self.constructor = False
-
-    def visit_ClassDef(self, node):
-        """
-        Overrides AST class definition visitor.
-
-        :param node: The node of the class.
-        """
-        # push context
-        prev_classinfo = self.classinfo
-        self.classinfo = ClassInfo(node)
-
-        # Run through all children of the class definition.
-        for child in node.body:
-            self.visit(child)
-
-        # finished class parsing, report it now.
-        self.classinfo.done(self.context)
-
-        # restore previous context
-        self.classinfo = prev_classinfo
-
-    def visit_FunctionDef(self, node):
-        "Overrides AST function definition visitor"
-        if self.classinfo:
-            # Check if this s the constructor.
-            if node.name == '__init__':
-                self.constructor = True
-                # Find all assignment expressions in the constructor.
-                for code in node.body:
-                    self.visit(code)
-                self.constructor = False
-            self.classinfo.add_method(node)
-        else:
-            self.globals.add_function(node)
-
-    def visit_Assign(self, node):
-        "Overrides AST assignment statement visitor"
-        # FIXME assignments to imported names may incorrectly report variable declaration
-        # pylint: disable=unnecessary-lambda
-        if self.constructor:
-            # Find attributes since we want "self." + "something"
-            for target in node.targets:
-                if isinstance(target, ast.Attribute):
-                    # If the value is a name and its id is self.
-                    if isinstance(target.value, ast.Name):
-                        if target.value.id == 'self':
-                            self.classinfo.add_member(target.attr)
-        else:
-            if self.classinfo:
-                # Store as class variable (shared by all instances)
-                fn = lambda x: self.classinfo.add_classvar(x)
-            else:
-                # Store as global variable
-                fn = lambda x: self.globals.add_variable(x)
-                # pylint disable=unnecessary-lambda
-            for target in node.targets:
-                # keep only simple names
-                if isinstance(target, ast.Name):
-                    fn(target.id)
-
+logger = logging.getLogger() # (__name__)
 
 def cli_parser():
     "Builds a command line parser suitable for this tool."
@@ -160,12 +86,17 @@ def run(cl_args):
 
     @param cl_args: argparser namespace.
     """
+    logger.info("Running with args: %r", cl_args)
+
+    # Load configuration
     cfg = configparser.ConfigParser()
-    # provided config file completely replaces global settings
     if cl_args.config:
+        # provided config file completely replaces global settings
         cfg.read(cl_args.config)
     else:
         cfg.read(CONFIG_FILENAMES)
+    logger.info("Using config: %r",
+                {s: {o:v for o, v in cfg.items(s)} for s, o in cfg.items()})
 
     # setup .puml generator
     if cl_args.root:
@@ -176,28 +107,9 @@ def run(cl_args):
         gen = PUML_Generator(dest=cl_args.output,
                              config=cfg)
 
-    # The tree visitor will use it
-    visitor = TreeVisitor(gen)
-
     gen.header()
     for srcfile in cl_args.py_file:
-        # Use AST to parse the file.
-        try:
-            with open(srcfile) as src:
-                tree = ast.parse(src.read())
-        except FileNotFoundError as err:
-            sys.stderr.write(str(err) + ", skipping\n")
-            continue
-        except SyntaxError as see:
-            sys.stderr.write('Syntax error in {0}:{1}:{2}: {3}'.format(
-                srcfile, see.lineno, see.offset, see.text))
-            sys.stderr.write("Aborting conversion of " + srcfile + "\n")
-            # skip to next srcfile
-            continue
-        # Build output while walking the tree
-        gen.start_file(srcfile)
-        visitor.visit(tree)
-        gen.end_file(srcfile)
+        gen.do_file(srcfile, "Skipping file")
 
     gen.footer()
     # TODO detect and warn about empty results

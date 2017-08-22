@@ -1,19 +1,5 @@
 version: 1
-disable_existing_loggers: false
-loggers:
-  root:
-    level: DEBUG
-    handlers: [console, file]
-  __main__:
-    level: DEBUG
-    handlers: [console]
-    formatter: standard
-  py2puml:
-    level: DEBUG
-    handlers: [file]
-  puml_generators:
-    level: DEBUG
-    handlers: [file]
+# disable_existing_loggers: false
 formatters:
   standard:
     format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -23,11 +9,17 @@ handlers:
   console:
     level: WARNING
     class : logging.StreamHandler
-    stream  : ext://sys.stdout
+    stream  : ext://sys.stderr
     formatter: standard
   file:
+    level: DEBUG
     class: logging.FileHandler
     formatter: tracing
     filename: py2puml.log
     mode: w
     encoding: utf8
+
+loggers:
+  root:
+    level: DEBUG
+    handlers: [console, file]

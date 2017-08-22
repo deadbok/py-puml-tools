@@ -4,12 +4,13 @@ See:
 https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
+# pylint: disable=invalid-name, unused-import
 
+# To use a consistent encoding
+from codecs import open         # pylint: disable=redefined-builtin
+from os import path
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
-# To use a consistent encoding
-from codecs import open
-from os import path
 
 here = path.abspath(path.dirname(__file__))
 
@@ -39,7 +40,7 @@ setup(
     # see also: https://pypi.python.org/pypi/setuptools_scm
     setup_requires=['setuptools_scm'],
     # use_scm_version=True,
-    use_scm_version = {"root": "..", "relative_to": __file__},
+    use_scm_version={"root": "..", "relative_to": __file__},
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

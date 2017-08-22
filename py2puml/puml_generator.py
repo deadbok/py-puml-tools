@@ -3,16 +3,18 @@
 # pylint: disable=invalid-name
 
 # standard lib imports
+import copy
 import logging
 import os
 
 # other imports
 import astor
+from ast_visitor import TreeVisitor
 
 # puml printation unit
 TAB = '  '
 # module logger
-logger = logging.getLogger(__name__)
+logger = logging.getLogger() # (__name__)
 
 class PUML_Generator:
     """Formats data for PlantUML.
@@ -66,6 +68,14 @@ class PUML_Generator:
         # End the PlantUML files.
         self.output('@enduml')
 
+    def do_file(self, srcfile, errormsg=None):
+        # The tree visitor will use it
+        visitor = TreeVisitor(srcfile, self)
+        if visitor.parse(errormsg):
+            self.start_file(srcfile)
+            # Build output while walking the tree
+            visitor.visit_tree()
+            self.end_file()
 
     def print_classinfo(self, classinfo):
         """Prints class definition as plantuml script."""
@@ -81,18 +91,47 @@ class PUML_Generator:
         for m in classinfo.members:
             self.output(TAB + classinfo.visibility(m) + m)
         for m in classinfo.methods:
-            # TODO allow to disable or simplify arg lists output (config)
-            arglist = astor.to_source(m.args).rstrip()
             self.output(TAB + "{0}{1}({2})".format(
                 classinfo.visibility(m.name),
-                m.name, arglist))
+                m.name, self.arglist(m, ismethod=True)))
         self.output("}\n")
 
     def print_codeinfo(self, codeinfo):
         """Prints module globals as plantuml script."""
-        if self.config.get('module', 'write-globals', fallback=None):
-            logger.warning("module.write-globals is not implemented")
-        # TODO implement print_codeinfo
+        if not self.config.getboolean('module', 'write-globals', fallback=False):
+            return
+        # logger.warning("module.write-globals is not implemented")
+        self.output("class", codeinfo.classname, "{")
+        for name in codeinfo.variables:
+            self.output(TAB + codeinfo.visibility(name) + name)
+        for fdef in codeinfo.functions:
+            self.output(TAB + "{0}{1}({2})".format(
+                codeinfo.visibility(fdef.name),
+                fdef.name, self.arglist(fdef)))
+        self.output("}\n")
+
+    def arglist(self, fdef, ismethod=False):
+        # TODO allow to simplify arg lists output (arg-omit-default)
+        section = 'methods' if ismethod else 'module'
+        if not self.config.getboolean(section, 'write-arg-list', fallback=True):
+            return ''
+
+        # avoid changing orginal args
+        args = copy.deepcopy(fdef.args)
+
+        # omit-self ?
+        if ismethod and self.config.getboolean(section, 'omit-self', fallback=False):
+            self_arg = args.args.pop(0)
+            if self_arg.arg != 'self':
+                logger.warning("Unexpected name %r for method 'self' parameter",
+                               self_arg.arg)
+
+        # omit-defaults ?
+        if self.config.getboolean(section, 'omit-defaults', fallback=False):
+            args.defaults = []
+            args.kw_defaults = []
+
+        return astor.to_source(args).rstrip()
 
 class PUML_Generator_NS(PUML_Generator):
     """Formats data for PlantUML.

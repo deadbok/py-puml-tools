@@ -3,16 +3,4 @@ skinparam monochrome true
 skinparam classAttributeIconSize 0
 scale 2
 
-ast.NodeVisitor <|-- TreeVisitor
-class TreeVisitor {
-  +context
-  +classinfo
-  +globals
-  +constructor
-  -__init__(self, context=None)
-  +visit_ClassDef(self, node)
-  +visit_FunctionDef(self, node)
-  +visit_Assign(self, node)
-}
-
 @enduml
