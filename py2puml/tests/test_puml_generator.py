@@ -6,7 +6,6 @@ import pytest
 # pylint: disable= invalid-name, redefined-outer-name, missing-docstring, no-self-use, too-few-public-methods
 
 from puml_generator import PUML_Generator, PUML_Generator_NS
-from py2puml import logger
 
 @pytest.fixture
 def cfg():
@@ -185,6 +184,7 @@ scale 2
         # assert False # force output
 
     def test_attribute_decorator(self):
+        # pylint: disable=protected-access
         node = ast.parse(
             "import contextlib\n"
             "@contextlib.contextmanager\n"
@@ -192,7 +192,7 @@ scale 2
             "    pass\n")
         import astor
         print(astor.dump_tree(node.body[1]))
-        deco = PUML_Generator.deco_marker(node.body[1].decorator_list[0])
+        deco = PUML_Generator._deco_marker(node.body[1].decorator_list[0])
         assert deco == '@contextlib.contextmanager'
 
     def test_abstract(self):
@@ -333,6 +333,4 @@ namespace dirA3 {
         assert_match_file(gen, 'examples/example_globals_NS.puml')
 
 
-#TODO test static methods
 #TODO test bad config file
-#TODO test logging

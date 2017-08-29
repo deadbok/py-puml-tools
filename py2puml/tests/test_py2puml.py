@@ -1,9 +1,5 @@
 """Tests for py2puml (pytest)"""
-import configparser
-import ast
-import io
-import pytest
-# pylint: disable= invalid-name, redefined-outer-name, missing-docstring, no-self-use, too-few-public-methods
+# pylint: disable=invalid-name, missing-docstring
 
 from py2puml import run, cli_parser
 

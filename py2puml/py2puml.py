@@ -113,7 +113,6 @@ def run(cl_args):
 
     gen.footer()
     # TODO detect and warn about empty results
-    # TODO optionally include global objects in a pseudo-class
     if cl_args.output != sys.stdout: # pragma: no cover
         cl_args.output.close()
 

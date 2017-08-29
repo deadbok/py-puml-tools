@@ -31,26 +31,47 @@ class PUML_Generator:
         self.sourcename = None
 
     def opt_prolog(self):
+        """Configured prolog for the PlantUML output.
+        @return prolog string (defaulting to empty string) or False if no configuration available.
+        """
         return self.config and self.config.get(
             'puml', 'prolog', fallback='')
 
     def opt_epilog(self):
+        """Configured epilog for the PlantUML output.
+        @return epilog string (defaulting to empty string) or False if no configuration available.
+        """
         return self.config and self.config.get(
             'puml', 'epilog', fallback='')
 
     def opt_globals(self):
+        """Tells whether the module globals should be reported.
+        @return boolean
+        """
         return self.config and self.config.getboolean(
             'module', 'write-globals', fallback=False)
 
     def opt_omit_self(self):
+        """Tells whether the methods argument lists should include 'self'.
+        This option could be useful to reduce classes width in diagram.
+        @return boolean, False by default
+        """
         return self.config and self.config.getboolean(
             'methods', 'omit-self', fallback=False)
 
     def opt_write_arglist(self, section='methods'):
+        """Tells whether functions and methods argument lists be included.
+        This option could be useful to reduce classes width in diagram.
+        @return boolean, True by default
+        """
         return not self.config or self.config.getboolean(
             section, 'write-arg-list', fallback=True)
 
     def opt_omit_defaults(self, section='methods'):
+        """Tells whether default values should be omitted in functions and methods argument.
+        This option could be useful to reduce classes width in diagram.
+        @return boolean, False by default
+        """
         return self.config and self.config.getboolean(
             section, 'omit-defaults', fallback=False)
 
@@ -94,16 +115,19 @@ class PUML_Generator:
         self.output('@enduml')
 
     def do_file(self, srcfile, errormsg=None):
+        """Processes a single python source file,
+           building output as configured while walking the tree.
+        """
         # The tree visitor will use it
         visitor = TreeVisitor(srcfile, self)
         if visitor.parse(errormsg):
             self.start_file(srcfile)
-            # Build output while walking the tree
             visitor.visit_tree()
             self.end_file()
 
     @staticmethod
-    def deco_marker(dec):
+    def _deco_marker(dec):
+        """helper function for functions decorators"""
         if isinstance(dec, ast.Attribute):
             return '@' + astor.to_source(dec).rstrip()
         if dec.id == 'staticmethod':
@@ -114,6 +138,7 @@ class PUML_Generator:
 
     @staticmethod
     def is_static_method(meth):
+        """Tells if given method is marked as static."""
         for dec in meth.decorator_list:
             if isinstance(dec, ast.Name) and dec.id == 'staticmethod':
                 return True
@@ -135,7 +160,7 @@ class PUML_Generator:
             self.output(TAB + "{0}{1}({2}){3}".format(
                 classinfo.visibility(m.name),
                 m.name, self.arglist(m, ismethod=True),
-                ','.join(["{%s}" % (self.deco_marker(dec),) for dec in m.decorator_list])
+                ','.join(["{%s}" % (self._deco_marker(dec),) for dec in m.decorator_list])
             ))
         self.output("}\n")
 
@@ -154,6 +179,8 @@ class PUML_Generator:
         self.output("}\n")
 
     def arglist(self, fdef, ismethod=False):
+        """Builds the argument list string of a function or method,
+        according to configured options."""
         section = 'methods' if ismethod else 'module'
         if not self.opt_write_arglist(section):
             return ''
@@ -189,7 +216,9 @@ class PUML_Generator_NS(PUML_Generator):
         return len(self.namespaces)
 
     def start_file(self, sourcename):
-        """Sets up the output context for a single python source file"""
+        """Sets up the output context for a single python source file.
+        This is where namespaces nesting is generated.
+        """
         super().start_file(sourcename)
 
         # make namespace hierarchy from root if supplied

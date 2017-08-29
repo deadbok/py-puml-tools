@@ -6,7 +6,7 @@ Infos are fed by some ast.NodeVisitor and used by some PUML_Generator.
 import logging
 import ast
 
-logger = logging.getLogger() # (__name__)
+logger = logging.getLogger() # (__name__) # pylint: disable=invalid-name
 
 class CodeInfo:
     """
@@ -59,10 +59,13 @@ class ClassInfo(CodeInfo):
 
     @property
     def classvars(self):
+        """The list of class variables.
+        Class variables are shared by all instances."""
         return self.variables
 
     @property
     def methods(self):
+        """The list of parsed methods of the class"""
         return self.functions
 
     def add_classvar(self, name):

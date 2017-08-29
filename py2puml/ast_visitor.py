@@ -1,4 +1,6 @@
-# pylint: disable=C0103
+# pylint: disable=invalid-name
+"""Custom Abstract Syntax Tree visitors"""
+
 import ast
 import logging
 import sys
@@ -12,6 +14,11 @@ class TreeVisitor(ast.NodeVisitor):
     """`ast.NodeVisitor` is the primary tool for ‘scanning’ the tree.
     To use it, subclass it and override methods visit_Foo, corresponding to the
     node classes (see Meet the Nodes).
+
+    >>> visitor = TreeVisitor("examples/person.py")
+    >>> visitor.parse(
+    >>> visitor.visit_tree()
+
     """
     # List to put the class data.
     def __init__(self, srcfile, context=None):
@@ -23,7 +30,7 @@ class TreeVisitor(ast.NodeVisitor):
         self.tree = None
 
     def parse(self, errormsg=None):
-        # Use AST to parse the file.
+        """Use AST to parse the source file."""
         try:
             with open(self.srcfile) as src:
                 self.tree = ast.parse(src.read())
@@ -39,6 +46,7 @@ class TreeVisitor(ast.NodeVisitor):
         return False
 
     def visit_tree(self):
+        """Visits the parsed tree."""
         return self.visit(self.tree)
 
     def visit_Module(self, node):

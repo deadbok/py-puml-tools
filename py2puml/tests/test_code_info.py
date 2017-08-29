@@ -1,7 +1,5 @@
 """Tests for code_info.py (pytest)"""
-import configparser
 import ast
-import io
 import pytest
 # pylint: disable= invalid-name, redefined-outer-name, missing-docstring, no-self-use, too-few-public-methods
 

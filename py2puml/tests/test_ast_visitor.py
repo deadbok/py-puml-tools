@@ -2,8 +2,7 @@
 import configparser
 import ast
 import io
-import pytest
-# pylint: disable= invalid-name, redefined-outer-name, missing-docstring, no-self-use, too-few-public-methods
+# pylint: disable= invalid-name, missing-docstring, no-self-use, too-few-public-methods
 
 # TODO one test file per module
 from ast_visitor import TreeVisitor
