@@ -18,7 +18,7 @@ class TreeVisitor(ast.NodeVisitor):
         self.srcfile = srcfile
         self.context = context
         self.classinfo = None
-        self.globals = CodeInfo()
+        self.moduleinfo = None
         self.constructor = False
         self.tree = None
 
@@ -41,6 +41,25 @@ class TreeVisitor(ast.NodeVisitor):
     def visit_tree(self):
         return self.visit(self.tree)
 
+    def visit_Module(self, node):
+        """
+        Overrides AST module visitor (top level).
+
+        :param node ast.Node : The parsed code
+        """
+        # Instanciate moduleinfo if required
+        # self.moduleinfo = context.getboolean(
+        #     'module','write-globals', fallback=False) and CodeInfo() or None
+        self.moduleinfo = CodeInfo() if self.context.opt_globals() else None
+
+        # Run through all children of the module
+        for child in node.body:
+            self.visit(child)
+
+        if self.moduleinfo:
+            self.moduleinfo.done(self.context)
+
+
     def visit_ClassDef(self, node):
         """
         Overrides AST class definition visitor.
@@ -51,7 +70,7 @@ class TreeVisitor(ast.NodeVisitor):
         prev_classinfo = self.classinfo
         self.classinfo = ClassInfo(node)
 
-        # Run through all children of the class definition.
+        # Run through all children of the class definition
         for child in node.body:
             self.visit(child)
 
@@ -73,8 +92,8 @@ class TreeVisitor(ast.NodeVisitor):
                     self.visit(code)
                 self.constructor = False
             self.classinfo.add_method(node)
-        else:
-            self.globals.add_function(node)
+        elif self.moduleinfo:
+            self.moduleinfo.add_function(node)
 
     def visit_Assign(self, node):
         "Overrides AST assignment statement visitor"
@@ -92,10 +111,12 @@ class TreeVisitor(ast.NodeVisitor):
             if self.classinfo:
                 # Store as class variable (shared by all instances)
                 fn = lambda x: self.classinfo.add_classvar(x)
-            else:
+            elif self.moduleinfo:
                 # Store as global variable
-                fn = lambda x: self.globals.add_variable(x)
+                fn = lambda x: self.moduleinfo.add_variable(x)
                 # pylint disable=unnecessary-lambda
+            else:
+                return
             for target in node.targets:
                 # keep only simple names
                 if isinstance(target, ast.Name):

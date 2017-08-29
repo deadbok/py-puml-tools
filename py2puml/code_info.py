@@ -27,6 +27,10 @@ class CodeInfo:
         node.body = ast.Pass()
         self.functions.append(node)
 
+    def done(self, context):
+        "Signals end of module parsing."
+        context.print_codeinfo(self)
+
     @staticmethod
     def visibility(name):
         """Detects the visibility of given member name, as plantuml convention symbol.

@@ -11,12 +11,20 @@ namespace puml_generator {
     +config
     +sourcename
     -__init__(self, dest, config=None)
+    +opt_prolog(self)
+    +opt_epilog(self)
+    +opt_globals(self)
+    +opt_omit_self(self)
+    +opt_write_arglist(self, section='methods')
+    +opt_omit_defaults(self, section='methods')
     +start_file(self, sourcename)
     +end_file(self, sourcename=None)
     +output(self, *args)
     +header(self)
     +footer(self)
     +do_file(self, srcfile, errormsg=None)
+    +deco_marker(dec){static}
+    +is_static_method(meth){static}
     +print_classinfo(self, classinfo)
     +print_codeinfo(self, codeinfo)
     +arglist(self, fdef, ismethod=False)
@@ -27,7 +35,7 @@ namespace puml_generator {
     +root
     +namespaces
     -__init__(self, dest, root, config=None)
-    +depth(self)
+    +depth(self){@property}
     +start_file(self, sourcename)
     +pop_ns(self, count=1)
     +push_ns(self, name)
@@ -43,7 +51,8 @@ namespace code_info {
     -__init__(self)
     +add_variable(self, name)
     +add_function(self, node)
-    +visibility(name)
+    +done(self, context)
+    +visibility(name){static}
   }
 
   CodeInfo <|-- ClassInfo
@@ -52,8 +61,8 @@ namespace code_info {
     +bases
     +members
     -__init__(self, node)
-    +classvars(self)
-    +methods(self)
+    +classvars(self){@property}
+    +methods(self){@property}
     +add_classvar(self, name)
     +add_member(self, name)
     +add_method(self, node)
@@ -67,12 +76,13 @@ namespace ast_visitor {
     +srcfile
     +context
     +classinfo
-    +globals
+    +moduleinfo
     +constructor
     +tree
     -__init__(self, srcfile, context=None)
     +parse(self, errormsg=None)
     +visit_tree(self)
+    +visit_Module(self, node)
     +visit_ClassDef(self, node)
     +visit_FunctionDef(self, node)
     +visit_Assign(self, node)

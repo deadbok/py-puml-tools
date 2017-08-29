@@ -25,7 +25,7 @@ class Clock {
 class Calendar {
   {static} +months
   {static} +date_style
-  +leapyear(year)
+  +leapyear(year){static}
   -__init__(self, d, m, y)
   +set_Calendar(self, d, m, y)
   -__str__(self)

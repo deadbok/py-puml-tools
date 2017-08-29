@@ -3,6 +3,7 @@
 # pylint: disable=invalid-name
 
 # standard lib imports
+import ast
 import copy
 import logging
 import os
@@ -28,6 +29,30 @@ class PUML_Generator:
         self.dest = dest
         self.config = config
         self.sourcename = None
+
+    def opt_prolog(self):
+        return self.config and self.config.get(
+            'puml', 'prolog', fallback='')
+
+    def opt_epilog(self):
+        return self.config and self.config.get(
+            'puml', 'epilog', fallback='')
+
+    def opt_globals(self):
+        return self.config and self.config.getboolean(
+            'module', 'write-globals', fallback=False)
+
+    def opt_omit_self(self):
+        return self.config and self.config.getboolean(
+            'methods', 'omit-self', fallback=False)
+
+    def opt_write_arglist(self, section='methods'):
+        return not self.config or self.config.getboolean(
+            section, 'write-arg-list', fallback=True)
+
+    def opt_omit_defaults(self, section='methods'):
+        return self.config and self.config.getboolean(
+            section, 'omit-defaults', fallback=False)
 
     def start_file(self, sourcename):
         """Sets up the output context for a single python source file"""
@@ -77,6 +102,22 @@ class PUML_Generator:
             visitor.visit_tree()
             self.end_file()
 
+    @staticmethod
+    def deco_marker(dec):
+        if isinstance(dec, ast.Attribute):
+            return '@' + astor.to_source(dec).rstrip()
+        if dec.id == 'staticmethod':
+            return 'static'
+        if dec.id == 'abstractmethod':
+            return 'abstract'
+        return '@' + dec.id
+
+    @staticmethod
+    def is_static_method(meth):
+        for dec in meth.decorator_list:
+            if isinstance(dec, ast.Name) and dec.id == 'staticmethod':
+                return True
+
     def print_classinfo(self, classinfo):
         """Prints class definition as plantuml script."""
         for base in classinfo.bases:
@@ -91,17 +132,19 @@ class PUML_Generator:
         for m in classinfo.members:
             self.output(TAB + classinfo.visibility(m) + m)
         for m in classinfo.methods:
-            self.output(TAB + "{0}{1}({2})".format(
+            self.output(TAB + "{0}{1}({2}){3}".format(
                 classinfo.visibility(m.name),
-                m.name, self.arglist(m, ismethod=True)))
+                m.name, self.arglist(m, ismethod=True),
+                ','.join(["{%s}" % (self.deco_marker(dec),) for dec in m.decorator_list])
+            ))
         self.output("}\n")
 
     def print_codeinfo(self, codeinfo):
         """Prints module globals as plantuml script."""
-        if not self.config.getboolean('module', 'write-globals', fallback=False):
-            return
+        assert self.opt_globals()
         # logger.warning("module.write-globals is not implemented")
-        self.output("class", codeinfo.classname, "{")
+        # represents data as a special class in plantuml
+        self.output("class", "__module__", "{")
         for name in codeinfo.variables:
             self.output(TAB + codeinfo.visibility(name) + name)
         for fdef in codeinfo.functions:
@@ -111,23 +154,22 @@ class PUML_Generator:
         self.output("}\n")
 
     def arglist(self, fdef, ismethod=False):
-        # TODO allow to simplify arg lists output (arg-omit-default)
         section = 'methods' if ismethod else 'module'
-        if not self.config.getboolean(section, 'write-arg-list', fallback=True):
+        if not self.opt_write_arglist(section):
             return ''
 
         # avoid changing orginal args
         args = copy.deepcopy(fdef.args)
 
         # omit-self ?
-        if ismethod and self.config.getboolean(section, 'omit-self', fallback=False):
+        if ismethod and self.opt_omit_self() and not self.is_static_method(fdef):
             self_arg = args.args.pop(0)
             if self_arg.arg != 'self':
-                logger.warning("Unexpected name %r for method 'self' parameter",
-                               self_arg.arg)
+                logger.warning("Unexpected name %r for method 'self' parameter in %s()",
+                               self_arg.arg, fdef.name)
 
         # omit-defaults ?
-        if self.config.getboolean(section, 'omit-defaults', fallback=False):
+        if self.opt_omit_defaults(section):
             args.defaults = []
             args.kw_defaults = []
 

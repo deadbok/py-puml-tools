@@ -20,6 +20,10 @@ handlers:
     encoding: utf8
 
 loggers:
-  root:
-    level: DEBUG
-    handlers: [console, file]
+  puml_generator:
+    level: INFO
+
+# root must be a top level section
+root:
+  level: DEBUG
+  handlers: [console, file]
