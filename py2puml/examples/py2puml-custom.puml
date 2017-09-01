@@ -1,7 +1,5 @@
 @startuml
-skinparam monochrome false
 skinparam classAttributeIconSize 0
-' set namespaceSeparator none
 scale 1.2
 
 namespace py2puml {
@@ -24,7 +22,7 @@ namespace puml_generator {
     +header(self)
     +footer(self)
     +do_file(self, srcfile, errormsg=None)
-    +deco_marker(dec){static}
+    -_deco_marker(dec){static}
     +is_static_method(meth){static}
     +print_classinfo(self, classinfo)
     +print_codeinfo(self, codeinfo)
@@ -90,4 +88,8 @@ namespace ast_visitor {
   }
 
 }
+ast_visitor.TreeVisitor ..> puml_generator.PUML_Generator : context
+TreeVisitor ..> ClassInfo : current class
+TreeVisitor ..> Code : module globals
+
 @enduml

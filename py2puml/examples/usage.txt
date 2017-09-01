@@ -1,0 +1,28 @@
+usage: py2uml [-h] [-c CONFIG] [-o OUTPUT] [-r ROOT] py_file [py_file ...]
+
+py2puml v1.0.0
+by Michelle Baert, based on work from Martin B. K. Grønholdt.
+
+    Create PlantUML classes from Python source code.
+
+positional arguments:
+  py_file               the Python source files to parse.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        Configuration file (replace defaults)
+  -o OUTPUT, --output OUTPUT
+                        The name of the ouput PlantUML file.
+  -r ROOT, --root ROOT  Project root directory. Create namespaces from there
+
+If no config file is provided, settings are loaded
+sequentially from all available files in :
+      - <PROGRAM_DIR>/py2puml.ini
+      - <USER_HOME>/.config/py2puml.ini
+      - <USER_HOME>/.py2puml.ini
+      - <WORK_DIR>/.py2puml.ini
+      - <WORK_DIR>/py2puml.ini
+
+If the provided config filename cannot be found,
+the program will use no config at all.

@@ -4,7 +4,6 @@ import ast
 import io
 # pylint: disable= invalid-name, missing-docstring, no-self-use, too-few-public-methods
 
-# TODO one test file per module
 from ast_visitor import TreeVisitor
 from puml_generator import PUML_Generator
 

@@ -58,16 +58,18 @@ def cli_parser():
     # Takes a python file as a parameter.
     parser = argparse.ArgumentParser(
         prog='py2uml',
-        description='py2puml' +
-        ' from Martin B. K. Grønholdt, v' + __version__ + ' by Michelle Baert.\n' +
-        'Create PlantUML classes from Python source code.',
-        epilog='If no config file is provided, settings are loaded \n' +
+        description='py2puml v' + __version__ +
+        '\nby Michelle Baert, based on work from Martin B. K. Grønholdt.\n\n' +
+        '    Create PlantUML classes from Python source code.',
+        epilog='If no config file is provided, settings are loaded\n' +
         'sequentially from all available files in :\n' +
         '      - <PROGRAM_DIR>/py2puml.ini\n' +
         '      - <USER_HOME>/.config/py2puml.ini\n' +
         '      - <USER_HOME>/.py2puml.ini\n' +
         '      - <WORK_DIR>/.py2puml.ini\n' +
-        '      - <WORK_DIR>/py2puml.ini\n',
+        '      - <WORK_DIR>/py2puml.ini\n' +
+        '\nIf the provided config filename cannot be found,\n' +
+        'the program will use no config at all.\n',
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-c', '--config',
                         help='Configuration file (replace defaults)')

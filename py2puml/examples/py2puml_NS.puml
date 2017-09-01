@@ -23,7 +23,7 @@ namespace puml_generator {
     +header(self)
     +footer(self)
     +do_file(self, srcfile, errormsg=None)
-    +deco_marker(dec){static}
+    -_deco_marker(dec){static}
     +is_static_method(meth){static}
     +print_classinfo(self, classinfo)
     +print_codeinfo(self, codeinfo)

@@ -328,7 +328,9 @@ namespace dirA3 {
     def test_write_globals(self, cfg_write_globals):
         dest = io.StringIO()
         gen = PUML_Generator_NS(dest, root='.', config=cfg_write_globals)
+        gen.header()
         gen.do_file('examples/example.py')
+        gen.footer()
         assert "global_func" in gen.dest.getvalue()
         assert_match_file(gen, 'examples/example_globals_NS.puml')
 

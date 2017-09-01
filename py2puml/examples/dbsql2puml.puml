@@ -1,4 +1,8 @@
 @startuml
+skinparam monochrome true
+skinparam classAttributeIconSize 0
+scale 2
+
 ValueError <|-- NoTableException
 class NoTableException {
 }

@@ -8,25 +8,28 @@ results as long as the syntax is correct.
 ## Features
   * optionally use namespaces to represent packages/folders
   * Supports simple and multiple inheritance
-  * Include argument lists
-  * configurable prolog and epilog, useful for styling
+  * Optionnally include argument lists
+  * Optionnally exclude 'self' and defaults from arg lists
+  * configurable prolog and epilog, useful for styling, and class associations
   * allow several input sources for one plantuml output.
 
 ## Command line interface
 
-    usage: py2uml [-h] [--config CONFIG] [-o [OUTPUT]] [-r ROOT]
-                  py_file [py_file ...]
+    usage: py2uml [-h] [-c CONFIG] [-o OUTPUT] [-r ROOT] py_file [py_file ...]
 
-    py2puml from Martin B. K. Grønholdt, v0.2.4 by Michelle Baert.
-    Create PlantUML classes from Python source code.
+    py2puml v1.0.0
+    by Michelle Baert, based on work from Martin B. K. Grønholdt.
+
+        Create PlantUML classes from Python source code.
 
     positional arguments:
       py_file               the Python source files to parse.
 
     optional arguments:
       -h, --help            show this help message and exit
-      --config CONFIG       Configuration file (replace defaults)
-      -o [OUTPUT], --output [OUTPUT]
+      -c CONFIG, --config CONFIG
+                            Configuration file (replace defaults)
+      -o OUTPUT, --output OUTPUT
                             The name of the ouput PlantUML file.
       -r ROOT, --root ROOT  Project root directory. Create namespaces from there
 
@@ -37,6 +40,9 @@ results as long as the syntax is correct.
           - <USER_HOME>/.py2puml.ini
           - <WORK_DIR>/.py2puml.ini
           - <WORK_DIR>/py2puml.ini
+
+    If the provided config filename cannot be found,
+    the program will use no config at all.
 
 ## Examples
 
@@ -53,9 +59,9 @@ Hand-made `Makefile`s are there to help automatisation.
 
 ![py2puml.py classes](examples/py2puml-custom.png)
 
-Of course the diagram can be enriched, with class associations
-for example, by editing the generated .puml file, or maybe with an epilog
-in custom config.
+Of course the generated PlantUML script can be edited to fine-tune your diagram,
+but a lot of customization can be done by specifying prolog and epilog in a
+configuration file.
 
 Here is an example with multiple source files, multiple inheritance, and
 [project-specific configuration](examples/cal_clock3/py2puml.ini):
@@ -63,3 +69,5 @@ Here is an example with multiple source files, multiple inheritance, and
 ![cal_clock3](examples/cal_clock3/calendar_clock.png):
 
 ## TODO
+  - detect and warn about empty results
+  - namespace specification of imported names (e.g. inheritance)

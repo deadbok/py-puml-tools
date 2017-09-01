@@ -2,6 +2,23 @@
 # pylint: disable=invalid-name, missing-docstring
 
 from py2puml import run, cli_parser
+from version import __version__
+
+def test_cli_usage(capsys):
+    cli_parser().print_help()
+    with open('examples/usage.txt') as f:
+        expected = f.read()
+
+    # Replace version number
+    s = "py2puml v1.0.0\n"
+    p = expected.find(s)
+    q = p+len(s)
+    expected = (expected[:p] + "py2puml v" + __version__ + "\n" + expected[q:])
+
+    # compare with captured output
+    out, err = capsys.readouterr()
+    assert err == ''
+    assert expected == out
 
 def test_run_multiple_sources(capsys):
     args = cli_parser().parse_args(
@@ -18,11 +35,11 @@ def test_run_multiple_sources(capsys):
 
     with open('examples/py2puml_NS.puml') as f:
         expected = f.read()
-    assert out == expected
+    assert expected == out
 
 def test_run_dbpuml2sql(capsys):
     args = cli_parser().parse_args(['-c', 'examples/dbpuml2sql.ini',
-                                    #'-r', '..',
+                                    #'-r', '../dbpuml2sql',
                                     '../dbpuml2sql/dbpuml2sql.py',
                                     '../dbpuml2sql/__init__.py',
                                     '../dbpuml2sql/pumlreader.py',
@@ -39,18 +56,16 @@ def test_run_dbpuml2sql(capsys):
 
     with open('examples/dbpuml2sql.puml') as f:
         expected = f.read()
-    assert out == expected
 
-def test_run_dbspq2puml(capsys):
+    assert expected == out
+
+def test_run_dbsql2puml(capsys):
     args = cli_parser().parse_args(['-c', 'examples/dbsql2puml.ini',
-                                    #'-r', '..',
+                                    # '-r', '../dbsql2puml',
                                     '../dbsql2puml/dbsql2puml.py',
                                     '../dbsql2puml/sql2puml.py',
                                     '../dbsql2puml/sqlparsetables.py'])
-    # missing config file silently ignores any config. Call it a feature
     # FIXME include package name for base classes imported directly
-    #       workaround: add a plantuml alias in prolog or epilog
-    # FIXME relations between namespaces
     run(args)
     out, err = capsys.readouterr()
 
@@ -62,8 +77,7 @@ def test_run_dbspq2puml(capsys):
 
     with open('examples/dbsql2puml.puml') as f:
         expected = f.read()
-    assert out == expected
-    # FIXME arglists missing
+    assert expected == out
 
 def test_run_syntax_error(capsys):
     args = cli_parser().parse_args('examples/bugged.py examples/person.py'.split())
@@ -72,7 +86,7 @@ def test_run_syntax_error(capsys):
 
     with open('examples/person.puml') as f:
         expected = f.read()
-    assert out == expected
+    assert expected == out
 
     assert err == """\
 Syntax error in examples/bugged.py:6:57: while i<10 #Begin loop, repeat until there's ten numbers
@@ -86,7 +100,7 @@ def test_run_filenotfound_error(capsys):
 
     with open('examples/person.puml') as f:
         expected = f.read()
-    assert out == expected
+    assert expected == out
 
     assert err == """\
 [Errno 2] No such file or directory: 'missing.py', skipping
