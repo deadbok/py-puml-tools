@@ -11,5 +11,6 @@ I am using them in school.*
  * [**dbsql2puml**](dbsql2puml/): Convert SQL CREATE TABLE statements into database diagrams
    written in PlantUML.
  * [**py2uml**](py2puml/): Generate a PlantUML class diagram from Python source code.
-   The original was rewritten, extended, and documentet by [@RockyRoad29](https://github.com/RockyRoad29)
+   The original was rewritten, extended, and documentet by [@RockyRoad29](https://github.com/RockyRoad29).
+   Repository: [RockyRoad29/py-puml-tools](https://github.com/RockyRoad29/py-puml-tools)
 
