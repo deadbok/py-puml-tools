@@ -1,0 +1,29 @@
+@startuml
+skinparam monochrome true
+skinparam classAttributeIconSize 0
+scale 2
+
+class A {
+  +name
+  +details
+  -__init__(self, name, details={}, **kwargs)
+  +cls_meth(){static}
+  +meth1(self, arg1, arg2='default', *args, **kwargs)
+}
+
+A <|-- Child
+class Child {
+  {static} +clsvar
+  +meth1(self, arg1, arg2, arg3=888)
+}
+
+ast.NodeVisitor <|-- MyVisitor
+class MyVisitor {
+}
+
+class C {
+  {static} -__metaclass__
+  +my_abstract_method(self, arg1){abstract}
+}
+
+@enduml

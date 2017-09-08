@@ -1,0 +1,34 @@
+@startuml
+skinparam monochrome true
+skinparam classAttributeIconSize 0
+scale 2
+
+ValueError <|-- NoTableException
+class NoTableException {
+}
+
+SQLParseTables <|-- SQL2PUML
+class SQL2PUML {
+  {static} +puml_template
+  {static} +puml_tables
+  {static} +current_table
+  +add_table(self, name)
+  +add_column(self, name, type)
+  +add_column_primary(self, name, type)
+  +add_column_foreign(self, name, type, reference)
+  +clear(self)
+  +transform(self, sql)
+}
+
+class SQLParseTables {
+  {static} +tables
+  {static} +db
+  {static} +cursor
+  +parse(self, sql)
+  +add_table(self, name)
+  +add_column(self, name, type)
+  +add_column_primary(self, name, type)
+  +add_column_foreign(self, name, type, reference)
+}
+
+@enduml

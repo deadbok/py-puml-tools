@@ -1,0 +1,8 @@
+astor==0.6
+certifi==2017.7.27.1
+coverage==4.4.1
+py==1.4.34
+pytest==3.2.1
+pytest-cov==2.5.1
+PyYAML==3.12
+setuptools-scm==1.15.6

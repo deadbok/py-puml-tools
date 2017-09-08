@@ -1,0 +1,29 @@
+version: 1
+# disable_existing_loggers: false
+formatters:
+  standard:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  tracing:
+    format: "%(asctime)s [%(name)s] %(levelname)s in %(funcName)s at %(pathname)s:%(lineno)d : %(message)s"
+handlers:
+  console:
+    level: WARNING
+    class : logging.StreamHandler
+    stream  : ext://sys.stderr
+    formatter: standard
+  file:
+    level: DEBUG
+    class: logging.FileHandler
+    formatter: tracing
+    filename: py2puml.log
+    mode: w
+    encoding: utf8
+
+loggers:
+  puml_generator:
+    level: INFO
+
+# root must be a top level section
+root:
+  level: DEBUG
+  handlers: [console, file]

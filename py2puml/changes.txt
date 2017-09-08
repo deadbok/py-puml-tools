@@ -1,0 +1,32 @@
+History
+Version 0.1.9
+ * Added package argument.
+
+Version 0.1.8
+ * Nicer command line help.
+
+Version 0.1.7
+* Fixed bug, when no namespace.
+
+Version 0.1.6
+* Functional namespace support
+
+Version 0.1.5
+* Add members from the class definition.
+* Do not write empty file.
+* Add namespace.
+
+Version 0.1.4
+* Output file name is now a parameter.
+
+Version 0.1.3
+* Change output file name to add ".db.puml" to the original file name.
+
+Version 0.1.2
+ * Exception handling.
+
+Version 0.1.1
+ * Comments.
+
+Version 0.1.0
+ * First working version.

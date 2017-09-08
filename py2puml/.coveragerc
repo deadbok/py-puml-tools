@@ -1,0 +1,8 @@
+[run]
+omit = tests/*
+    setup.py
+[report]
+show_missing = True
+[html]
+directory = tests/cov_html
+

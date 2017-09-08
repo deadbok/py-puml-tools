@@ -1,0 +1,92 @@
+@startuml
+skinparam monochrome true
+skinparam classAttributeIconSize 0
+scale 2
+
+namespace py2puml {
+}
+namespace puml_generator {
+  class PUML_Generator {
+    +dest
+    +config
+    +sourcename
+    -__init__(self, dest, config=None)
+    +opt_prolog(self)
+    +opt_epilog(self)
+    +opt_globals(self)
+    +opt_omit_self(self)
+    +opt_write_arglist(self, section='methods')
+    +opt_omit_defaults(self, section='methods')
+    +start_file(self, sourcename)
+    +end_file(self, sourcename=None)
+    +output(self, *args)
+    +header(self)
+    +footer(self)
+    +do_file(self, srcfile, errormsg=None)
+    -_deco_marker(dec){static}
+    +is_static_method(meth){static}
+    +print_classinfo(self, classinfo)
+    +print_codeinfo(self, codeinfo)
+    +arglist(self, fdef, ismethod=False)
+  }
+
+  PUML_Generator <|-- PUML_Generator_NS
+  class PUML_Generator_NS {
+    +root
+    +namespaces
+    -__init__(self, dest, root, config=None)
+    +depth(self){@property}
+    +start_file(self, sourcename)
+    +pop_ns(self, count=1)
+    +push_ns(self, name)
+    +output(self, *args)
+    +footer(self)
+  }
+
+}
+namespace code_info {
+  class CodeInfo {
+    +variables
+    +functions
+    -__init__(self)
+    +add_variable(self, name)
+    +add_function(self, node)
+    +done(self, context)
+    +visibility(name){static}
+  }
+
+  CodeInfo <|-- ClassInfo
+  class ClassInfo {
+    +classname
+    +bases
+    +members
+    -__init__(self, node)
+    +classvars(self){@property}
+    +methods(self){@property}
+    +add_classvar(self, name)
+    +add_member(self, name)
+    +add_method(self, node)
+    +done(self, context)
+  }
+
+}
+namespace ast_visitor {
+  ast.NodeVisitor <|-- TreeVisitor
+  class TreeVisitor {
+    +srcfile
+    +context
+    +classinfo
+    +moduleinfo
+    +constructor
+    +tree
+    -__init__(self, srcfile, context=None)
+    +parse(self, errormsg=None)
+    +visit_tree(self)
+    +visit_Module(self, node)
+    +visit_ClassDef(self, node)
+    +visit_FunctionDef(self, node)
+    +visit_Assign(self, node)
+  }
+
+}
+@enduml

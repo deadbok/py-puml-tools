@@ -1,0 +1,55 @@
+@startuml
+scale 1.5
+skinparam backgroundcolor AntiqueWhite/Gold
+skinparam title {
+BorderRoundCorner 15
+BorderThickness 2
+BorderColor MidnightBlue
+BackgroundColor Aqua-CadetBlue
+}
+skinparam class {
+BackgroundColor NavajoWhite
+ArrowColor MidnightBlue
+BorderColor Gold
+}
+title "Multiple inheritance example"
+center footer <img:img_footer.png>
+
+class Clock {
+  -__init__(self, hours, minutes, seconds)
+  +set_Clock(self, hours, minutes, seconds)
+  -__str__(self)
+  +tick(self)
+}
+
+class Calendar {
+  {static} +months
+  {static} +date_style
+  +leapyear(year){static}
+  -__init__(self, d, m, y)
+  +set_Calendar(self, d, m, y)
+  -__str__(self)
+  +advance(self)
+}
+
+Clock <|-- CalendarClock
+Calendar <|-- CalendarClock
+class CalendarClock {
+  -__init__(self, day, month, year, hour, minute, second)
+  +tick(self)
+  -__str__(self)
+}
+
+note bottom of Calendar
+the <i>advance()</i> method
+advances the date
+by one day,
+end note
+''
+note bottom of Clock
+the <i>tick()</i> method
+advances the clock
+by one second,
+end note
+
+@enduml
